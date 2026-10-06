@@ -1,3 +1,5 @@
+> **Questo repository non si usa più.** Dal 7 ottobre 2026 il Calendario eventi gira nello stesso servizio dei Protocolli: il codice è nel repository `Know-How-Academy`, cartella `calendario/`. Le modifiche vanno fatte lì.
+
 # Calendario eventi
 
 Il calendario aziendale del gruppo: formazione, riunioni ed eventi. Ogni persona dello staff entra con nome utente e password e vede solo gli eventi pensati per lei.
