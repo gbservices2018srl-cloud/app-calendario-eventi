@@ -8,7 +8,9 @@
 <title>Calendario eventi · To Smile</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="To Smile Eventi">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&display=swap">
@@ -245,6 +247,48 @@ dialog::backdrop{background:rgba(10,30,30,.45);backdrop-filter:blur(2px)}
 .toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:100;box-shadow:var(--shadow)}
 .loading{opacity:.55;pointer-events:none;transition:opacity .15s}
 
+/* presenze */
+.st{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.st svg{width:13px;height:13px;stroke-width:2.4}
+.st.yes{background:var(--ok-soft);color:var(--ok)}
+.st.no{background:var(--surface-3);color:var(--muted)}
+.st.wait{background:color-mix(in srgb,var(--brand-yellow) 45%,var(--surface));color:#6B6400}
+:root[data-theme="dark"] .st.wait{color:var(--brand-yellow)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .st.wait{color:var(--brand-yellow);background:color-mix(in srgb,var(--brand-yellow) 16%,var(--surface))}}
+.counts{display:inline-flex;gap:8px;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.counts span{display:inline-flex;align-items:center;gap:3px}
+.counts svg{width:13px;height:13px;stroke-width:2.4}
+.counts .y{color:var(--ok)}.counts .n{color:var(--muted)}.counts .w{color:#8A7F00}
+.rsvp{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rsvp button{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-size:16px}
+.rsvp button svg{width:20px;height:20px}
+.rsvp button.yes.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.rsvp button.no.on{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.rsvp-box{background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.rsvp-box p{margin:0;font-size:14px;color:var(--muted)}
+.rsvp-box p b{color:var(--fg)}
+.att{display:flex;flex-direction:column;gap:8px}
+.att-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.att-stats button{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px;align-items:center}
+.att-stats button b{font:800 26px/1 var(--f-display)}
+.att-stats button span{font-size:12.5px;font-weight:700;color:var(--muted)}
+.att-stats button.yes b{color:var(--ok)}.att-stats button.wait b{color:#8A7F00}
+.att-stats button.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 25%,transparent)}
+.att-bar{display:flex;height:8px;border-radius:8px;overflow:hidden;background:var(--surface-3)}
+.att-bar i{display:block;height:100%}
+.att-list{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.att-list .pr{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line-2)}
+.att-list .pr:first-child{border-top:none}
+.att-list .pr .grow{flex:1;min-width:0}
+.att-list .pr .nm{font-weight:700;font-size:14px}
+.att-list .pr .sub{font-size:12.5px;color:var(--muted);display:flex;gap:4px 8px;flex-wrap:wrap;align-items:center}
+.att-list .empty{padding:14px}
+.nodev{color:var(--muted);display:inline-flex;align-items:center;gap:3px}
+.nodev svg{width:13px;height:13px}
+.banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;margin-bottom:14px;background:var(--purple-soft);border:1px solid color-mix(in srgb,var(--brand-purple) 30%,transparent)}
+.banner>svg{width:22px;height:22px;color:var(--brand-purple);flex:none}
+.banner .grow{flex:1;min-width:0;font-size:14px}
+.banner b{display:block}
 @media (max-width:1060px){
   .cal{grid-template-columns:minmax(0,1fr)}
   .side{position:static}
@@ -252,6 +296,9 @@ dialog::backdrop{background:rgba(10,30,30,.45);backdrop-filter:blur(2px)}
   .settings{grid-template-columns:1fr 1fr}
 }
 @media (max-width:720px){
+  .banner{flex-wrap:wrap}
+  .banner .grow{flex:1 1 calc(100% - 40px)}
+  .banner .btn{flex:1}
   .brand h1,.brand .sep{display:none}
   .brand .logo{height:30px}
   .who>span:not(.av){display:none}
@@ -308,6 +355,8 @@ const I = {
   copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>', out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>', bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
+  help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.8 9.5a2.3 2.3 0 0 1 4.4.9c0 1.6-2.2 2-2.2 3.3M12 16.8h.01"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/>', up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.3"/>', note: '<path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
 };
@@ -376,10 +425,14 @@ $('#who').addEventListener('click', e => {
   let m = $('.menu');
   if (m) { m.remove(); $('#who').setAttribute('aria-expanded', 'false'); return; }
   m = document.createElement('div'); m.className = 'menu'; m.setAttribute('role', 'menu');
-  m.innerHTML = `<button data-a="pw" role="menuitem">${ic('key')}Cambia password</button><button data-a="out" role="menuitem">${ic('out')}Esci</button>`;
+  const pushItem = PUSH.state === 'on' ? `<button data-a="push-off" role="menuitem">${ic('bell')}Disattiva notifiche qui</button>`
+    : PUSH.state === 'off' ? `<button data-a="push-on" role="menuitem">${ic('bell')}Attiva notifiche</button>` : '';
+  m.innerHTML = `${pushItem}<button data-a="pw" role="menuitem">${ic('key')}Cambia password</button><button data-a="out" role="menuitem">${ic('out')}Esci</button>`;
   m.addEventListener('click', ev => {
     ev.stopPropagation(); const a = ev.target.closest('[data-a]')?.dataset.a; m.remove();
     if (a === 'pw') passwordDialog();
+    if (a === 'push-on') pushEnable();
+    if (a === 'push-off') pushDisable();
     if (a === 'out') api('/api/logout', { method: 'POST', body: {} }).finally(() => location.href = '/login');
   });
   $('#who').appendChild(m); $('#who').setAttribute('aria-expanded', 'true');
@@ -388,7 +441,7 @@ document.addEventListener('click', () => $('.menu')?.remove());
 
 function go(view) { S.view = view; renderTop(); render(); window.scrollTo(0, 0); }
 function render() {
-  ({ cal: renderCal, events: renderEvents, people: renderPeople, settings: renderSettings })[S.view]();
+  return ({ cal: renderCal, events: renderEvents, people: renderPeople, settings: renderSettings })[S.view]();
 }
 
 /* ============ eventi: caricamento e filtri ============ */
@@ -399,6 +452,18 @@ async function ensureEvents(from, to) {
   S.events = events; S.weeks = weeks || {}; S.range = [f, t];
 }
 async function reloadEvents() { const r = S.range; S.range = null; if (r) await ensureEvents(r[0], r[1]); }
+const isPast = e => e.end < today();
+function rsvpBadge(e) {
+  if (!e.rsvp) return '';
+  if (isAdmin()) {
+    if (!e.att || !e.att.total) return '';
+    const w = e.att.total - e.att.yes - e.att.no;
+    return `<span class="counts" title="Presenti, assenti, senza risposta"><span class="y">${ic('check')}${e.att.yes}</span><span class="n">${ic('x')}${e.att.no}</span><span class="w">${ic('help')}${w}</span></span>`;
+  }
+  if (e.myRsvp === 'yes') return `<span class="st yes">${ic('check')}Ci sarai</span>`;
+  if (e.myRsvp === 'no') return `<span class="st no">${ic('x')}Non ci sarai</span>`;
+  return isPast(e) ? '' : `<span class="st wait">${ic('help')}Da confermare</span>`;
+}
 const sortEv = (a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0) || (b.allDay - a.allDay) || String(a.startTime || '').localeCompare(String(b.startTime || '')) || a.title.localeCompare(b.title);
 function shown(e) {
   if (S.typeFilter.size && !S.typeFilter.has(e.typeId)) return false;
@@ -433,10 +498,66 @@ function evCard(e, { withDate = false, day = null } = {}) {
         <span>${ic('clock')}${esc(timeLabel(e, day))}</span>
         ${place ? `<span>${ic('pin')}${esc(place)}</span>` : ''}
         ${isAdmin() ? `<span>${ic('eye')}${esc(audienceLabel(e))}</span>` : ''}
+        ${rsvpBadge(e)}
       </span>
     </span>
   </button>`;
 }
+
+/* ============ notifiche sul dispositivo ============ */
+const PUSH = { sw: null, sub: null, state: 'checking' };
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const b64 = s => { const p = '='.repeat((4 - s.length % 4) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+async function pushInit() {
+  if (!('serviceWorker' in navigator)) { PUSH.state = 'unsupported'; return; }
+  try { PUSH.sw = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready; } catch { PUSH.state = 'unsupported'; return; }
+  if (!('PushManager' in window) || !('Notification' in window)) { PUSH.state = isIOS && !standalone ? 'ios-install' : 'unsupported'; return; }
+  PUSH.sub = await PUSH.sw.pushManager.getSubscription();
+  if (Notification.permission === 'denied') PUSH.state = 'denied';
+  else if (PUSH.sub && Notification.permission === 'granted') { PUSH.state = 'on'; api('/api/push/subscribe', { method: 'POST', body: { subscription: PUSH.sub.toJSON() } }).catch(() => {}); }
+  else PUSH.state = 'off';
+}
+async function pushEnable() {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { PUSH.state = perm === 'denied' ? 'denied' : 'off'; render(); return toast('Notifiche non attivate'); }
+    const { key } = await api('/api/push/key');
+    PUSH.sub = await PUSH.sw.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) });
+    await api('/api/push/subscribe', { method: 'POST', body: { subscription: PUSH.sub.toJSON() } });
+    PUSH.state = 'on'; render();
+    const t = await api('/api/push/test', { method: 'POST', body: {} });
+    toast(t.ok ? 'Notifiche attive: ti è arrivata una prova' : 'Notifiche attivate');
+  } catch (x) { toast('Non sono riuscito ad attivare le notifiche: ' + x.message); }
+}
+async function pushDisable() {
+  try { if (PUSH.sub) { await api('/api/push/unsubscribe', { method: 'POST', body: { endpoint: PUSH.sub.endpoint } }); await PUSH.sub.unsubscribe(); } } catch {}
+  PUSH.sub = null; PUSH.state = 'off'; toast('Notifiche disattivate su questo dispositivo'); render();
+}
+// Per lo staff: gli eventi a cui deve ancora rispondere, sempre in vista in cima al calendario.
+function pendingPanel() {
+  if (isAdmin()) return '';
+  const list = S.events.filter(e => e.rsvp && !e.myRsvp && !isPast(e)).sort(sortEv);
+  if (!list.length) return '';
+  return `<div class="card" style="padding:14px 16px;margin-bottom:14px;border-color:color-mix(in srgb,var(--brand-yellow) 70%,var(--line))">
+    <h3 style="font:700 17px/1.2 var(--f-display);margin:0 0 2px">Da confermare</h3>
+    <p class="muted" style="margin:0 0 10px;font-size:13px">${list.length === 1 ? 'Un evento aspetta' : `${list.length} eventi aspettano`} la tua risposta: ci sarai?</p>
+    <div class="ev-list">${list.slice(0, 4).map(e => evCard(e, { withDate: true })).join('')}</div>
+    ${list.length > 4 ? `<p class="muted" style="margin:8px 0 0;font-size:13px">e altri ${list.length - 4} nei prossimi mesi.</p>` : ''}
+  </div>`;
+}
+function pushBanner() {
+  if (isAdmin() || store.get('pushLater', 0) > Date.now()) return '';
+  const later = `<button class="btn sm ghost" data-push-later>Più tardi</button>`;
+  if (PUSH.state === 'off') return `<div class="banner">${ic('bell')}<div class="grow"><b>Attiva le notifiche</b>Ricevi sul telefono i promemoria degli eventi e le richieste di conferma.</div>${later}<button class="btn sm primary" data-push-on>Attiva</button></div>`;
+  if (PUSH.state === 'ios-install') return `<div class="banner">${ic('bell')}<div class="grow"><b>Installa l'app per ricevere le notifiche</b>Su iPhone tocca il tasto Condividi in Safari, poi «Aggiungi alla schermata Home». Apri l'app dall'icona e attiva le notifiche.</div>${later}</div>`;
+  if (PUSH.state === 'denied') return `<div class="banner">${ic('bell')}<div class="grow"><b>Notifiche bloccate</b>Le hai bloccate per questa app: puoi riattivarle dalle impostazioni del telefono o del browser.</div>${later}</div>`;
+  return '';
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-push-on]')) pushEnable();
+  if (e.target.closest('[data-push-later]')) { store.set('pushLater', Date.now() + 3 * 24 * 3600e3); render(); }
+});
 
 /* ============ vista calendario ============ */
 function gridRange() {
@@ -461,6 +582,8 @@ async function renderCal() {
     : fmt(S.cursor, { month: 'long', year: 'numeric' });
   const typeChips = S.types.map(t => `<button class="chip c-${t.color} ${S.typeFilter.has(t.id) ? 'on' : ''}" data-type="${t.id}"><span class="dot"></span>${esc(t.name)}</button>`).join('');
   main.innerHTML = `
+  ${pushBanner()}
+  ${pendingPanel()}
   <div class="cal">
     <section>
       <div class="tb">
@@ -648,22 +771,84 @@ function openEvent(id) {
       ${l || e.locationNote ? `<div class="kv">${ic('pin')}<div>${l ? `<b>${esc(l.name)}</b>${l.address ? `<span class="muted">${esc(l.address)}</span> · <a href="${maps}" target="_blank" rel="noopener">Mappa</a>` : ''}` : ''}${e.locationNote ? `<div class="${l ? 'muted' : ''}">${l ? '' : '<b>'}${linkify(e.locationNote)}${l ? '' : '</b>'}</div>` : ''}</div></div>` : ''}
       ${isAdmin() ? `<div class="kv">${ic('eye')}<div><b>Chi lo vede</b><span class="muted">${esc(audienceLabel(e))}</span></div></div>` : ''}
       ${e.description ? `<div class="kv">${ic('note')}<div class="desc">${linkify(e.description)}</div></div>` : ''}
+      ${e.rsvp && !isAdmin() ? rsvpBox(e) : ''}
+      ${e.rsvp && isAdmin() ? '<div class="att" id="att"><p class="muted" style="margin:0">Caricamento presenze…</p></div>' : ''}
     </div>
     <div class="sh-foot">
       ${e.link ? `<a class="btn primary" href="${esc(e.link)}" target="_blank" rel="noopener">${ic('link')}Apri il link</a>` : ''}
       <a class="btn" href="/api/events/${e.id}/ics">${ic('dl')}Aggiungi al mio calendario</a>
     </div></div>`);
+  if (e.rsvp && !isAdmin()) bindRsvp(sheet, e);
+  if (e.rsvp && isAdmin()) loadAttendance(sheet, e);
   if (isAdmin()) {
     $('[data-edit]', sheet).onclick = () => openForm(e);
     $('[data-dup]', sheet).onclick = () => openForm({ ...e, id: null, title: e.title + ' (copia)' });
   }
 }
 
+function rsvpBox(e) {
+  const past = isPast(e);
+  const msg = past ? (e.myRsvp ? `Avevi risposto: <b>${e.myRsvp === 'yes' ? 'ci sarò' : 'non ci sarò'}</b>.` : 'Evento concluso.')
+    : e.myRsvp ? `Hai risposto <b>${e.myRsvp === 'yes' ? 'ci sarò' : 'non ci sarò'}</b>. Puoi cambiare idea fino al giorno dell'evento.` : '<b>Ci sarai?</b> Conferma la tua presenza.';
+  return `<div class="rsvp-box" id="rsvp"><p>${msg}</p>${past ? '' : `<div class="rsvp">
+    <button class="yes ${e.myRsvp === 'yes' ? 'on' : ''}" data-rsvp="yes">${ic('check')}Ci sarò</button>
+    <button class="no ${e.myRsvp === 'no' ? 'on' : ''}" data-rsvp="no">${ic('x')}Non ci sarò</button></div>`}</div>`;
+}
+function bindRsvp(sheet, e) {
+  sheet.addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-rsvp]'); if (!b) return;
+    const status = e.myRsvp === b.dataset.rsvp ? null : b.dataset.rsvp;
+    sheet.querySelectorAll('[data-rsvp]').forEach(x => x.disabled = true);
+    try {
+      await api(`/api/events/${e.id}/rsvp`, { method: 'POST', body: { status } });
+      e.myRsvp = status; $('#rsvp', sheet).outerHTML = rsvpBox(e);
+      toast(status === 'yes' ? 'Presenza confermata' : status === 'no' ? 'Assenza segnata' : 'Risposta tolta');
+      render();
+    } catch (x) { toast(x.message); sheet.querySelectorAll('[data-rsvp]').forEach(x => x.disabled = false); }
+  });
+}
+async function loadAttendance(sheet, e, open = '') {
+  const box = $('#att', sheet); if (!box) return;
+  let data;
+  try { data = await api(`/api/events/${e.id}/attendance`); } catch (x) { box.innerHTML = `<div class="err">${esc(x.message)}</div>`; return; }
+  const P = data.people, groups = { yes: P.filter(p => p.status === 'yes'), no: P.filter(p => p.status === 'no'), wait: P.filter(p => !p.status) };
+  e.att = { total: P.length, yes: groups.yes.length, no: groups.no.length };
+  const pct = n => P.length ? (n / P.length * 100).toFixed(1) : 0;
+  const label = { yes: 'Presenti', no: 'Assenti', wait: 'Senza risposta' };
+  const fmtDT = s => s ? `${fmt(s.slice(0, 10), { day: 'numeric', month: 'short' })} alle ${s.slice(11)}` : '';
+  const person = (p, k) => `<div class="pr"><span class="av">${esc((p.name || p.username).split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase())}</span>
+    <div class="grow"><div class="nm">${esc(p.name)}</div><div class="sub">${p.categories.map(c => `<span class="tag plain">${esc(catName(c))}</span>`).join('')}
+      ${p.answeredAt ? `<span>${esc(fmtDT(p.answeredAt))}</span>` : ''}${p.hasPush ? '' : `<span class="nodev" title="Non ha attivato le notifiche">${ic('bell')}notifiche non attive</span>`}</div></div>
+    ${k === 'wait' && !isPast(e) && p.hasPush ? `<button class="btn icon ghost" data-remind-one="${p.id}" title="Manda promemoria a ${esc(p.name)}" aria-label="Manda promemoria a ${esc(p.name)}">${ic('bell')}</button>` : ''}</div>`;
+  const draw = sel => {
+    box.innerHTML = `<div class="kv" style="align-items:center">${ic('users')}<b>Presenze</b><span class="muted" style="font-size:13px">· ${P.length} ${P.length === 1 ? 'persona invitata' : 'persone invitate'}</span></div>
+      <div class="att-bar" aria-hidden="true"><i style="width:${pct(groups.yes.length)}%;background:var(--ok)"></i><i style="width:${pct(groups.no.length)}%;background:var(--muted)"></i><i style="width:${pct(groups.wait.length)}%;background:var(--brand-yellow)"></i></div>
+      <div class="att-stats">${['yes', 'no', 'wait'].map(k => `<button class="${k} ${sel === k ? 'on' : ''}" data-grp="${k}" aria-expanded="${sel === k}"><b>${groups[k].length}</b><span>${label[k]}</span></button>`).join('')}</div>
+      ${sel ? `<div class="att-list">${groups[sel].length ? groups[sel].map(p => person(p, sel)).join('') : `<div class="empty">Nessuno in questo elenco.</div>`}</div>` : '<p class="muted" style="margin:0;font-size:13px">Tocca un numero per vedere i nomi.</p>'}
+      ${!isPast(e) && groups.wait.length ? `<button class="btn primary" data-remind-all>${ic('bell')}Manda promemoria a chi non ha risposto (${groups.wait.length})</button>` : ''}
+      ${data.reminders.length ? `<p class="muted" style="margin:0;font-size:12.5px">Ultimo promemoria: ${esc(fmtDT(data.reminders[0].sentAt))}, arrivato a ${data.reminders[0].recipients} ${data.reminders[0].recipients === 1 ? 'persona' : 'persone'}.</p>` : ''}`;
+  };
+  let sel = open; draw(sel);
+  box.onclick = async ev => {
+    const g = ev.target.closest('[data-grp]');
+    if (g) { sel = sel === g.dataset.grp ? '' : g.dataset.grp; return draw(sel); }
+    const one = ev.target.closest('[data-remind-one]'), all = ev.target.closest('[data-remind-all]');
+    if (!one && !all) return;
+    (one || all).disabled = true;
+    try {
+      const r = await api(`/api/events/${e.id}/remind`, { method: 'POST', body: one ? { userIds: [one.dataset.remindOne] } : {} });
+      toast(r.sent ? `Promemoria inviato a ${r.sent} ${r.sent === 1 ? 'persona' : 'persone'}` : 'Nessuno raggiungibile: non hanno attivato le notifiche');
+      if (r.unreachable.length && all) setTimeout(() => toast(`Senza notifiche: ${r.unreachable.join(', ')}`), 2700);
+      loadAttendance(sheet, e, sel || 'wait');
+    } catch (x) { toast(x.message); (one || all).disabled = false; }
+  };
+}
+
 /* ============ modulo evento (admin) ============ */
 function openForm(e, date) {
   const isNew = !e?.id;
   const v = e || { title: '', typeId: S.types[0]?.id || '', locationId: '', locationNote: '', start: date || today(), end: date || today(),
-    allDay: false, startTime: '09:00', endTime: '13:00', description: '', link: '', allStaff: true, categories: [] };
+    allDay: false, startTime: '09:00', endTime: '13:00', description: '', link: '', allStaff: true, categories: [], rsvp: true };
   const cats = new Set(v.categories);
   const sheet = openDialog(`
     ${head(isNew ? 'Nuovo evento' : 'Modifica evento')}
@@ -696,6 +881,7 @@ function openForm(e, date) {
         <div class="chips" id="cats" style="margin-top:4px" ${v.allStaff ? 'hidden' : ''}>${S.categories.map(c => `<button type="button" class="chip ${cats.has(c.id) ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('')}</div>
         <span class="hint" id="reach"></span>
       </div>
+      <label class="check"><input type="checkbox" name="rsvp" ${v.rsvp !== false ? 'checked' : ''}>Chiedi la conferma di presenza (ci sarò / non ci sarò)</label>
       <label class="field"><span>Descrizione <small class="muted" style="font-weight:500">(facoltativa)</small></span><textarea name="description" maxlength="5000" placeholder="Programma, relatori, cosa portare…">${esc(v.description)}</textarea></label>
       <label class="field"><span>Link <small class="muted" style="font-weight:500">(iscrizione, videochiamata, materiale)</small></span><input name="link" value="${esc(v.link)}" maxlength="500" placeholder="https://…" inputmode="url"></label>
     </form>
@@ -745,7 +931,7 @@ function openForm(e, date) {
   $('#save', sheet).onclick = async () => {
     const body = { title: f.title.value, typeId: f.typeId.value, locationId: f.locationId.value, locationNote: f.locationNote.value,
       start: f.start.value, end: f.end.value || f.start.value, allDay: f.allDay.checked, startTime: f.startTime.value, endTime: f.endTime.value,
-      description: f.description.value, link: f.link.value, allStaff, categories: [...cats] };
+      description: f.description.value, link: f.link.value, allStaff, categories: [...cats], rsvp: f.rsvp.checked };
     const btn = $('#save', sheet); btn.disabled = true;
     try {
       if (isNew) await api('/api/events', { method: 'POST', body }); else await api('/api/events/' + e.id, { method: 'PUT', body });
@@ -787,7 +973,8 @@ function drawEventRows() {
   $('#evrows').innerHTML = list.length ? `<div class="rows">${list.map(e => `<div class="row click" data-edit="${e.id}">${evDate(e)}
       <div class="grow"><div class="title">${esc(e.title)}</div>
         <div class="meta">${typeOf(e.typeId) ? `<span class="tag c-${colorOf(e)}">${esc(typeOf(e.typeId).name)}</span>` : ''}<span>${esc(e.start !== e.end ? whenLabel(e) : timeLabel(e))}</span>${placeLabel(e) ? `<span>${ic('pin', 'i hide-m')} ${esc(placeLabel(e))}</span>` : ''}</div>
-        <div class="meta" style="margin-top:6px">${e.allStaff ? '<span class="tag plain">Tutto lo staff</span>' : e.categories.map(c => `<span class="tag plain">${esc(catName(c))}</span>`).join('')}</div></div>
+        <div class="meta" style="margin-top:6px">${e.allStaff ? '<span class="tag plain">Tutto lo staff</span>' : e.categories.map(c => `<span class="tag plain">${esc(catName(c))}</span>`).join('')}${rsvpBadge(e)}</div></div>
+      ${e.rsvp ? `<button class="btn sm" data-att="${e.id}">${ic('users')}<span class="hide-m">Presenze</span></button>` : ''}
       <button class="btn icon ghost" data-dupe="${e.id}" title="Duplica" aria-label="Duplica">${ic('copy')}</button>
     </div>`).join('')}</div>`
     : `<div class="empty"><b>Nessun evento</b>${F.when === 'next' ? 'Non ci sono eventi in programma con questi filtri.' : 'Nessun evento passato con questi filtri.'}</div>`;
@@ -798,6 +985,7 @@ $('#main').addEventListener('click', e => {
   if (S.view !== 'events') return;
   if (e.target.closest('[data-new]')) return openForm(null, today());
   const w = e.target.closest('[data-when]'); if (w) { S.evFilter.when = w.dataset.when; return renderEvents(); }
+  const at = e.target.closest('[data-att]'); if (at) return openEvent(at.dataset.att);
   const d = e.target.closest('[data-dupe]'); if (d) { const ev = S.events.find(x => x.id === d.dataset.dupe); return openForm({ ...ev, id: null, title: ev.title + ' (copia)' }); }
   const r = e.target.closest('[data-edit]'); if (r) openForm(S.events.find(x => x.id === r.dataset.edit));
 });
@@ -1009,6 +1197,14 @@ function passwordDialog() {
 (async () => {
   try { await loadState(); } catch (e) { $('#main').innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
   renderTop(); render();
+  pushInit().then(() => { if (S.view === 'cal' && PUSH.state !== 'checking') render(); });
+  const want = new URLSearchParams(location.search).get('event');
+  if (want) {
+    history.replaceState(null, '', '/');
+    if (!S.events.some(e => e.id === want)) { try { await ensureEvents(ymd(addDays(new Date(), -90)), ymd(addDays(new Date(), 400))); } catch {} }
+    const ev = S.events.find(e => e.id === want);
+    if (ev) { S.sel = ev.start; const d = parse(ev.start); S.cursor = new Date(d.getFullYear(), d.getMonth(), 1); S.view = 'cal'; renderTop(); await render(); openEvent(want); }
+  }
   // quando l'app torna in primo piano, aggiorna gli eventi
   document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && !dlg.open) { try { await reloadEvents(); if (S.view === 'cal' || S.view === 'events') render(); } catch {} } });
 })();

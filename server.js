@@ -6,6 +6,7 @@ const session = require('express-session');
 const PgStore = require('connect-pg-simple')(session);
 const bcrypt = require('bcryptjs');
 const db = require('./lib/db');
+const push = require('./lib/push');
 
 const PORT = process.env.PORT || 3000;
 const PROD = process.env.NODE_ENV === 'production';
@@ -115,11 +116,16 @@ const isDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s + 'T00:
 const isTime = s => /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 const EVENT_COLS = `e.id, e.title, e.type_id, e.location_id, e.location_note, e.start_date, e.end_date, e.all_day,
   to_char(e.start_time, 'HH24:MI') as start_time, to_char(e.end_time, 'HH24:MI') as end_time,
-  e.description, e.link, e.all_staff,
+  e.description, e.link, e.all_staff, e.rsvp,
   coalesce((select array_agg(category_id) from event_categories ec where ec.event_id = e.id), '{}') as categories`;
 const shape = e => ({ id: e.id, title: e.title, typeId: e.type_id, locationId: e.location_id, locationNote: e.location_note,
   start: e.start_date, end: e.end_date || e.start_date, allDay: e.all_day, startTime: e.start_time, endTime: e.end_time,
-  description: e.description, link: e.link, allStaff: e.all_staff, categories: e.categories });
+  description: e.description, link: e.link, allStaff: e.all_staff, categories: e.categories, rsvp: e.rsvp,
+  ...(e.my_rsvp !== undefined ? { myRsvp: e.my_rsvp } : {}), ...(e.att ? { att: e.att } : {}) });
+
+// Chi è chiamato a rispondere a un evento: lo staff attivo che può vederlo (gli amministratori no).
+const AUDIENCE = (ev, usr) => `${usr}.active and ${usr}.role = 'staff' and (${ev}.all_staff or exists (select 1 from event_categories ec
+  join user_categories uc on uc.category_id = ec.category_id where ec.event_id = ${ev}.id and uc.user_id = ${usr}.id))`;
 
 // Il controllo di chi vede cosa avviene qui sul server: un collaboratore non riceve mai gli eventi non suoi.
 function visibilityClause(user, params) {
@@ -134,7 +140,12 @@ app.get('/api/events', needUser, wrap(async (req, res) => {
   if (!isDate(from) || !isDate(to)) return bad(res, 400, 'Periodo non valido.');
   const params = [from, to];
   const vis = visibilityClause(req.user, params);
-  const { rows } = await db.q(`select ${EVENT_COLS} from events e
+  let extra = '';
+  if (req.user.role === 'admin') extra = `, case when e.rsvp then (select json_build_object('total', count(*), 'yes', count(*) filter (where r.status = 'yes'),
+      'no', count(*) filter (where r.status = 'no')) from users u left join rsvp r on r.event_id = e.id and r.user_id = u.id
+      where ${AUDIENCE('e', 'u')}) end as att`;
+  else { params.push(req.user.id); extra = `, (select status from rsvp where event_id = e.id and user_id = $${params.length}) as my_rsvp`; }
+  const { rows } = await db.q(`select ${EVENT_COLS}${extra} from events e
     where e.start_date <= $2 and coalesce(e.end_date, e.start_date) >= $1 and ${vis}
     order by e.start_date, e.all_day desc, e.start_time nulls first, e.title limit 2000`, params);
   // numero di settimana scelto dall'amministrazione (1, 2, 3, 4, 4bis), indicato dal lunedì
@@ -147,7 +158,7 @@ function eventFields(b) {
     title: str(b.title, 160), typeId: str(b.typeId, 64) || null, locationId: str(b.locationId, 64) || null,
     locationNote: str(b.locationNote, 200), start: str(b.start, 10), end: str(b.end, 10), allDay: !!b.allDay,
     startTime: str(b.startTime, 5), endTime: str(b.endTime, 5), description: str(b.description, 5000),
-    link: str(b.link, 500), allStaff: !!b.allStaff, categories: ids(b.categories),
+    link: str(b.link, 500), allStaff: !!b.allStaff, categories: ids(b.categories), rsvp: b.rsvp !== false,
   };
   if (!f.title) return 'Manca il titolo.';
   if (!isDate(f.start)) return 'Manca la data.';
@@ -174,8 +185,8 @@ app.post('/api/events', needAdmin, wrap(async (req, res) => {
   if (typeof f === 'string') return bad(res, 400, f);
   const id = db.newId();
   await db.q(`insert into events (id, title, type_id, location_id, location_note, start_date, end_date, all_day, start_time, end_time,
-    description, link, all_staff, updated_by) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-    [id, f.title, f.typeId, f.locationId, f.locationNote, f.start, f.end, f.allDay, f.startTime, f.endTime, f.description, f.link, f.allStaff, req.user.name]);
+    description, link, all_staff, updated_by, rsvp) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+    [id, f.title, f.typeId, f.locationId, f.locationNote, f.start, f.end, f.allDay, f.startTime, f.endTime, f.description, f.link, f.allStaff, req.user.name, f.rsvp]);
   await saveCategories(id, f.categories);
   res.json({ id });
 }));
@@ -183,8 +194,8 @@ app.put('/api/events/:id', needAdmin, wrap(async (req, res) => {
   const f = eventFields(req.body);
   if (typeof f === 'string') return bad(res, 400, f);
   const r = await db.q(`update events set title=$2, type_id=$3, location_id=$4, location_note=$5, start_date=$6, end_date=$7, all_day=$8,
-    start_time=$9, end_time=$10, description=$11, link=$12, all_staff=$13, updated_by=$14, updated_at=now() where id=$1`,
-    [req.params.id, f.title, f.typeId, f.locationId, f.locationNote, f.start, f.end, f.allDay, f.startTime, f.endTime, f.description, f.link, f.allStaff, req.user.name]);
+    start_time=$9, end_time=$10, description=$11, link=$12, all_staff=$13, updated_by=$14, rsvp=$15, updated_at=now() where id=$1`,
+    [req.params.id, f.title, f.typeId, f.locationId, f.locationNote, f.start, f.end, f.allDay, f.startTime, f.endTime, f.description, f.link, f.allStaff, req.user.name, f.rsvp]);
   if (!r.rowCount) return bad(res, 404, 'Evento non trovato.');
   await saveCategories(req.params.id, f.categories);
   res.json({ ok: true });
@@ -224,6 +235,79 @@ app.get('/api/events/:id/ics', needUser, wrap(async (req, res) => {
   const fname = e.title.normalize('NFD').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'evento';
   res.set({ 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="${fname}.ics"` });
   res.send(ics);
+}));
+
+/* ---------- presenze ---------- */
+const todayRome = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+app.post('/api/events/:id/rsvp', needUser, wrap(async (req, res) => {
+  const status = req.body.status;
+  if (!['yes', 'no', null].includes(status ?? null)) return bad(res, 400, 'Risposta non valida.');
+  const params = [req.params.id];
+  const vis = visibilityClause(req.user, params);
+  const { rows } = await db.q(`select e.rsvp, coalesce(e.end_date, e.start_date) as last_day from events e where e.id = $1 and ${vis}`, params);
+  const e = rows[0];
+  if (!e) return bad(res, 404, 'Evento non trovato.');
+  if (!e.rsvp) return bad(res, 400, 'Per questo evento non serve la conferma.');
+  if (e.last_day < todayRome()) return bad(res, 400, 'L\'evento è già passato.');
+  if (status) await db.q(`insert into rsvp (event_id, user_id, status) values ($1,$2,$3)
+    on conflict (event_id, user_id) do update set status = excluded.status, updated_at = now()`, [req.params.id, req.user.id, status]);
+  else await db.q('delete from rsvp where event_id = $1 and user_id = $2', [req.params.id, req.user.id]);
+  res.json({ ok: true });
+}));
+// Elenco nominativo: chi ha confermato, chi no, chi non ha ancora risposto.
+app.get('/api/events/:id/attendance', needAdmin, wrap(async (req, res) => {
+  const { rows } = await db.q(`select u.id, u.name, u.username, r.status,
+      to_char(r.updated_at at time zone 'Europe/Rome', 'YYYY-MM-DD HH24:MI') as answered_at,
+      coalesce((select array_agg(category_id) from user_categories where user_id = u.id), '{}') as categories,
+      exists (select 1 from push_subs s where s.user_id = u.id) as has_push
+    from events e join users u on ${AUDIENCE('e', 'u')} left join rsvp r on r.event_id = e.id and r.user_id = u.id
+    where e.id = $1 order by u.name`, [req.params.id]);
+  const { rows: rem } = await db.q(`select to_char(sent_at at time zone 'Europe/Rome', 'YYYY-MM-DD HH24:MI') as sent_at, recipients, sent_by
+    from reminders where event_id = $1 order by sent_at desc limit 5`, [req.params.id]);
+  res.json({ people: rows.map(r => ({ id: r.id, name: r.name, username: r.username, status: r.status || null, answeredAt: r.answered_at,
+    categories: r.categories, hasPush: r.has_push })), reminders: rem.map(r => ({ sentAt: r.sent_at, recipients: r.recipients, by: r.sent_by })) });
+}));
+// Promemoria: notifica sul telefono/computer di chi non ha ancora risposto (o delle persone scelte).
+app.post('/api/events/:id/remind', needAdmin, wrap(async (req, res) => {
+  const { rows: evs } = await db.q(`select ${EVENT_COLS} from events e where e.id = $1`, [req.params.id]);
+  const ev = evs[0];
+  if (!ev) return bad(res, 404, 'Evento non trovato.');
+  const only = ids(req.body.userIds);
+  const { rows: people } = await db.q(`select u.id, u.name from events e join users u on ${AUDIENCE('e', 'u')}
+    left join rsvp r on r.event_id = e.id and r.user_id = u.id
+    where e.id = $1 and ${only.length ? 'u.id = any($2)' : 'r.status is null'}`, only.length ? [ev.id, only] : [ev.id]);
+  if (!people.length) return res.json({ sent: 0, reached: [], unreachable: [] });
+  const dt = new Date(ev.start_date + 'T12:00:00Z');
+  const when = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(dt)
+    + (ev.all_day ? '' : ` alle ${ev.start_time}`);
+  const result = await push.sendToUsers(people.map(p => p.id), {
+    title: `Promemoria: ${ev.title}`,
+    body: `${when.charAt(0).toUpperCase() + when.slice(1)}. ${ev.rsvp ? 'Conferma se ci sarai.' : ''}`.trim(),
+    url: `/?event=${ev.id}`, tag: 'evento-' + ev.id,
+  });
+  const reached = people.filter(p => result.has(p.id)), unreachable = people.filter(p => !result.has(p.id));
+  await db.q('insert into reminders (id, event_id, recipients, sent_by) values ($1,$2,$3,$4)', [db.newId(), ev.id, reached.length, req.user.name]);
+  res.json({ sent: reached.length, reached: reached.map(p => p.name), unreachable: unreachable.map(p => p.name) });
+}));
+
+/* ---------- notifiche sul dispositivo ---------- */
+app.get('/api/push/key', needUser, wrap(async (req, res) => res.json({ key: await push.publicKey() })));
+app.post('/api/push/subscribe', needUser, wrap(async (req, res) => {
+  const s = req.body.subscription || {};
+  const endpoint = str(s.endpoint, 1000), p256dh = str(s.keys?.p256dh, 200), auth = str(s.keys?.auth, 100);
+  if (!/^https:\/\//.test(endpoint) || !p256dh || !auth) return bad(res, 400, 'Iscrizione non valida.');
+  await db.q(`insert into push_subs (endpoint, user_id, p256dh, auth, device) values ($1,$2,$3,$4,$5)
+    on conflict (endpoint) do update set user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth, device = excluded.device`,
+    [endpoint, req.user.id, p256dh, auth, str(req.get('user-agent'), 300)]);
+  res.json({ ok: true });
+}));
+app.post('/api/push/unsubscribe', needUser, wrap(async (req, res) => {
+  await db.q('delete from push_subs where endpoint = $1 and user_id = $2', [str(req.body.endpoint, 1000), req.user.id]);
+  res.json({ ok: true });
+}));
+app.post('/api/push/test', needUser, wrap(async (req, res) => {
+  const ok = await push.sendToUsers([req.user.id], { title: 'Notifiche attive', body: 'Da ora ricevi qui i promemoria degli eventi To Smile.', url: '/' });
+  res.json({ ok: ok.has(req.user.id) });
 }));
 
 /* ---------- numero della settimana (admin) ---------- */
@@ -364,6 +448,8 @@ app.get('/', page('app.html'));
 app.get('/healthz', (req, res) => res.send('ok'));
 app.get('/manifest.webmanifest', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.webmanifest')));
 app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'public', 'logo.png'), { maxAge: '7d' }));
+app.get('/sw.js', (req, res) => { res.set({ 'Cache-Control': 'no-cache', 'Service-Worker-Allowed': '/' }); res.sendFile(path.join(__dirname, 'public', 'sw.js')); });
+for (const f of ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png']) app.get('/' + f, (req, res) => res.sendFile(path.join(__dirname, 'public', f), { maxAge: '7d' }));
 app.get('/icon.svg', (req, res) => res.sendFile(path.join(__dirname, 'public', 'icon.svg')));
 
 app.use((err, req, res, next) => {
@@ -375,5 +461,6 @@ app.use((err, req, res, next) => {
   await db.migrate();
   await db.ensureEnvAdmin();
   await db.seedIfEmpty();
+  await push.init().catch(e => console.warn('Notifiche non attive:', e.message));
   app.listen(PORT, () => console.log(`Calendario eventi attivo sulla porta ${PORT}`));
 })().catch(e => { console.error('Avvio non riuscito:', e); process.exit(1); });
