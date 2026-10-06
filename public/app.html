@@ -116,11 +116,22 @@ h2.view{font:700 26px/1.15 var(--f-display);letter-spacing:-.015em;margin:0}
 .preview{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600}
 select.sm,input.sm{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:5px 9px;font-size:13.5px}
 .grid{overflow:hidden}
-.dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--surface-2)}
+.dow{display:grid;grid-template-columns:52px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--surface-2)}
 .dow span{padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-.weeks{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.weeks{display:grid;grid-template-columns:52px repeat(7,minmax(0,1fr))}
+.wk{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border:none;border-right:1px solid var(--line);border-bottom:1px solid var(--line-2);background:var(--surface-2);font:inherit;color:var(--muted)}
+button.wk{cursor:pointer}
+button.wk:hover{background:var(--purple-soft)}
+.wk small{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.wk b{min-width:30px;height:26px;padding:0 6px;border-radius:8px;display:grid;place-items:center;font-size:14px;font-weight:800;background:var(--brand-purple);color:#fff}
+.wk b.none{background:none;color:color-mix(in srgb,var(--muted) 55%,transparent);font-weight:600;border:1px dashed var(--line)}
+.wk-tag{display:inline-flex;align-items:center;font-size:12px;font-weight:800;padding:1px 8px;border-radius:999px;background:var(--purple-soft);color:var(--brand-purple)}
+.wkpick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.wkpick button{height:56px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:20px;font-weight:800;color:var(--fg)}
+.wkpick button:hover{border-color:var(--brand-purple)}
+.wkpick button.on{background:var(--brand-purple);border-color:var(--brand-purple);color:#fff}
 .day{position:relative;min-height:116px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);padding:6px 6px 8px;display:flex;flex-direction:column;gap:3px;cursor:pointer;background:var(--surface);text-align:left;border-top:none;border-left:none;font:inherit;min-width:0}
-.day:nth-child(7n){border-right:none}
+.day:nth-child(8n){border-right:none}
 .day:hover{background:var(--surface-2)}
 .day.out{background:var(--surface-2)}
 .day.out .num{color:color-mix(in srgb,var(--muted) 60%,transparent)}
@@ -251,6 +262,8 @@ dialog::backdrop{background:rgba(10,30,30,.45);backdrop-filter:blur(2px)}
   .day .pill,.day .more{display:none}
   .dots{display:flex}
   .dow span{padding:6px 2px;text-align:center;font-size:11px}
+  .dow,.weeks{grid-template-columns:34px repeat(7,minmax(0,1fr))}
+  .wk{padding:6px 1px}.wk small{display:none}.wk b{min-width:0;height:22px;padding:0 4px;font-size:12px;border-radius:6px}
   .settings{grid-template-columns:1fr}
   .two,.three{grid-template-columns:1fr}
   .ag-day{grid-template-columns:56px minmax(0,1fr);gap:10px}
@@ -307,6 +320,9 @@ const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())
 const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const today = () => ymd(new Date());
+const monday = s => { const d = parse(s); return ymd(addDays(d, -((d.getDay() + 6) % 7))); };
+const weekOf = s => S.weeks[monday(s)] || '';
+const WEEK_LABELS = ['1', '2', '3', '4', '4bis'];
 const fmt = (s, o) => new Intl.DateTimeFormat('it-IT', o).format(typeof s === 'string' ? parse(s) : s);
 const longDate = s => fmt(s, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -331,7 +347,7 @@ const S = {
   me: null, categories: [], types: [], locations: [], users: [],
   view: 'cal', mode: store.get('mode', 'month'),
   cursor: (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })(),
-  sel: today(), events: [], range: null, typeFilter: new Set(store.get('types', [])), preview: '',
+  sel: today(), events: [], weeks: {}, range: null, typeFilter: new Set(store.get('types', [])), preview: '',
   evFilter: { q: '', when: 'next', type: '', cat: '' }, userFilter: { q: '', cat: '' },
 };
 const isAdmin = () => S.me?.role === 'admin';
@@ -379,8 +395,8 @@ function render() {
 async function ensureEvents(from, to) {
   if (S.range && S.range[0] <= from && S.range[1] >= to) return;
   const f = S.range ? (from < S.range[0] ? from : S.range[0]) : from, t = S.range ? (to > S.range[1] ? to : S.range[1]) : to;
-  const { events } = await api(`/api/events?from=${f}&to=${t}`);
-  S.events = events; S.range = [f, t];
+  const { events, weeks } = await api(`/api/events?from=${f}&to=${t}`);
+  S.events = events; S.weeks = weeks || {}; S.range = [f, t];
 }
 async function reloadEvents() { const r = S.range; S.range = null; if (r) await ensureEvents(r[0], r[1]); }
 const sortEv = (a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0) || (b.allDay - a.allDay) || String(a.startTime || '').localeCompare(String(b.startTime || '')) || a.title.localeCompare(b.title);
@@ -470,10 +486,17 @@ async function renderCal() {
   </div>`;
 }
 function monthGrid(gs, ge) {
-  const dows = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+  const dows = ['Sett.', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
   let cells = '';
   for (let d = new Date(gs); d <= ge; d = addDays(d, 1)) {
-    const k = ymd(d), evs = onDay(k), out = d.getMonth() !== S.cursor.getMonth(), we = d.getDay() === 0 || d.getDay() === 6;
+    const k = ymd(d);
+    if (d.getDay() === 1) {
+      const lab = S.weeks[k] || '';
+      const inner = `<small>Sett.</small><b class="${lab ? '' : 'none'}">${lab ? esc(lab) : (isAdmin() ? '+' : '–')}</b>`;
+      cells += isAdmin() ? `<button class="wk" data-week="${k}" aria-label="Numero della settimana del ${esc(fmt(d, { day: 'numeric', month: 'long' }))}: ${lab || 'non impostato'}">${inner}</button>`
+        : `<div class="wk" aria-label="Settimana ${esc(lab || 'non indicata')}">${inner}</div>`;
+    }
+    const evs = onDay(k), out = d.getMonth() !== S.cursor.getMonth(), we = d.getDay() === 0 || d.getDay() === 6;
     const max = 3, pills = evs.slice(0, evs.length > max ? max - 1 : max).map(e =>
       `<span class="pill c-${colorOf(e)} ${e.start !== k ? 'cont' : ''}" data-ev="${e.id}" role="button" tabindex="-1">${!e.allDay && e.start === k ? `<span class="t">${e.startTime}</span>` : ''}<span class="n">${esc(e.title)}</span></span>`).join('');
     const more = evs.length > max ? `<span class="more">+${evs.length - max + 1} altri</span>` : '';
@@ -487,7 +510,7 @@ function dayPanel() {
   const evs = onDay(S.sel);
   return `<div class="card" id="daypanel">
     <h3>${esc(cap(fmt(S.sel, { weekday: 'long', day: 'numeric', month: 'long' })))}</h3>
-    <p class="sub">${S.sel === today() ? 'Oggi · ' : ''}${evs.length ? `${evs.length} event${evs.length > 1 ? 'i' : 'o'}` : 'Nessun evento'}</p>
+    <p class="sub">${S.sel === today() ? 'Oggi · ' : ''}${weekOf(S.sel) ? `<span class="wk-tag">Settimana ${esc(weekOf(S.sel))}</span> · ` : ''}${evs.length ? `${evs.length} event${evs.length > 1 ? 'i' : 'o'}` : 'Nessun evento'}</p>
     <div class="ev-list">${evs.map(e => evCard(e, { day: S.sel })).join('')}</div>
     ${isAdmin() ? `<button class="btn sm" style="margin-top:${evs.length ? 10 : 0}px" data-new="${S.sel}">${ic('plus')}Aggiungi in questo giorno</button>` : ''}
   </div>`;
@@ -512,7 +535,7 @@ function agendaList(from, to) {
   for (const k of keys) (months[k.slice(0, 7)] ||= []).push(k);
   return `<div class="agenda">${Object.entries(months).map(([m, ks]) => `<div class="ag-month card" style="padding:16px 18px">
     <h3>${esc(fmt(m + '-01', { month: 'long', year: 'numeric' }))}</h3>
-    ${ks.map(k => `<div class="ag-day"><div class="ag-date ${k === today() ? 'today' : ''}"><b>${parse(k).getDate()}</b><span>${esc(fmt(k, { weekday: 'short' }))}</span></div>
+    ${ks.map(k => `<div class="ag-day"><div class="ag-date ${k === today() ? 'today' : ''}"><b>${parse(k).getDate()}</b><span>${esc(fmt(k, { weekday: 'short' }))}</span>${weekOf(k) ? `<div style="margin-top:6px"><span class="wk-tag">Sett. ${esc(weekOf(k))}</span></div>` : ''}</div>
       <div class="ev-list">${days[k].sort(sortEv).map(e => evCard(e, { day: k })).join('')}</div></div>`).join('')}
   </div>`).join('')}</div>`;
 }
@@ -535,6 +558,8 @@ $('#main').addEventListener('click', e => {
   if (t.closest('[data-clear]')) { S.typeFilter.clear(); store.set('types', []); return renderCal(); }
   const nw = t.closest('[data-new]');
   if (nw) return openForm(null, nw.dataset.new || (S.sel >= today() ? S.sel : today()));
+  const wk = t.closest('[data-week]');
+  if (wk) return weekDialog(wk.dataset.week);
   const day = t.closest('[data-day]');
   if (day) {
     S.sel = day.dataset.day;
@@ -566,6 +591,47 @@ function armed(btn, fn, label = 'Conferma eliminazione') {
   });
 }
 const linkify = s => esc(s).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+
+/* ============ numero della settimana (admin) ============ */
+function weekDialog(start) {
+  const cur = S.weeks[start] || '';
+  const end = addDays(parse(start), 6);
+  const range = `dal ${fmt(start, { day: 'numeric', month: 'long' })} al ${fmt(end, { day: 'numeric', month: 'long' })}`;
+  let pick = cur;
+  const sheet = openDialog(`${head('Numero della settimana')}
+    <div class="sh-body">
+      <p class="muted" style="margin:-4px 0 0">Settimana ${esc(range)}. Lo staff lo vede accanto alla settimana nel calendario.</p>
+      <div class="wkpick">${WEEK_LABELS.map(l => `<button type="button" data-pick="${l}" class="${l === cur ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <label class="field"><span>Prosegui in automatico</span>
+        <select id="wk-cont"><option value="0">Solo questa settimana</option><option value="4">Anche le 4 settimane dopo</option><option value="8">Anche le 8 settimane dopo</option><option value="12">Anche le 12 settimane dopo</option><option value="26">Anche le 26 settimane dopo (6 mesi)</option><option value="52">Anche le 52 settimane dopo (1 anno)</option></select>
+        <span class="hint">Continua la sequenza 1 → 2 → 3 → 4 → 1 sulle settimane seguenti, sovrascrivendo quelle già impostate. Il 4bis lo metti tu a mano dove serve.</span></label>
+      <div class="note" id="wk-prev" hidden></div>
+    </div>
+    <div class="sh-foot">${cur ? '<button class="btn danger" id="wk-clear">Togli</button>' : ''}<span class="spacer"></span><button class="btn ghost" data-close>Annulla</button><button class="btn primary" id="wk-save" ${pick ? '' : 'disabled'}>Salva</button></div>`, { narrow: true });
+  const seq = () => {
+    const n = +$('#wk-cont', sheet).value, out = [{ start, label: pick }];
+    let v = pick === '4bis' ? 4 : +pick;
+    for (let i = 1; i <= n; i++) { v = v % 4 + 1; out.push({ start: ymd(addDays(parse(start), 7 * i)), label: String(v) }); }
+    return out;
+  };
+  const preview = () => {
+    const n = +$('#wk-cont', sheet).value, el = $('#wk-prev', sheet);
+    el.hidden = !n || !pick;
+    if (!el.hidden) el.innerHTML = '<b>Anteprima:</b> ' + seq().slice(0, 9).map(w => `${fmt(w.start, { day: 'numeric', month: 'short' })} → <b>${w.label}</b>`).join(' · ') + (n > 8 ? ' …' : '');
+  };
+  sheet.addEventListener('click', e => {
+    const b = e.target.closest('[data-pick]'); if (!b) return;
+    pick = b.dataset.pick; sheet.querySelectorAll('[data-pick]').forEach(x => x.classList.toggle('on', x === b));
+    $('#wk-save', sheet).disabled = false; preview();
+  });
+  $('#wk-cont', sheet).onchange = preview;
+  const save = async weeks => {
+    try { await api('/api/weeks', { method: 'PUT', body: { weeks } }); closeDialog(); await reloadEvents(); render(); toast('Settimane aggiornate'); }
+    catch (x) { toast(x.message); }
+  };
+  $('#wk-save', sheet).onclick = () => save(seq());
+  if (cur) $('#wk-clear', sheet).onclick = () => save([{ start, label: '' }]);
+}
 
 /* ============ dettaglio evento ============ */
 function openEvent(id) {

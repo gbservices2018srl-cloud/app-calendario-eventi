@@ -137,7 +137,9 @@ app.get('/api/events', needUser, wrap(async (req, res) => {
   const { rows } = await db.q(`select ${EVENT_COLS} from events e
     where e.start_date <= $2 and coalesce(e.end_date, e.start_date) >= $1 and ${vis}
     order by e.start_date, e.all_day desc, e.start_time nulls first, e.title limit 2000`, params);
-  res.json({ events: rows.map(shape) });
+  // numero di settimana scelto dall'amministrazione (1, 2, 3, 4, 4bis), indicato dal lunedì
+  const { rows: wk } = await db.q(`select week_start, label from week_labels where week_start between ($1::date - 6) and $2`, [from, to]);
+  res.json({ events: rows.map(shape), weeks: Object.fromEntries(wk.map(w => [w.week_start, w.label])) });
 }));
 
 function eventFields(b) {
@@ -222,6 +224,23 @@ app.get('/api/events/:id/ics', needUser, wrap(async (req, res) => {
   const fname = e.title.normalize('NFD').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'evento';
   res.set({ 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="${fname}.ics"` });
   res.send(ics);
+}));
+
+/* ---------- numero della settimana (admin) ---------- */
+const WEEK_LABELS = ['1', '2', '3', '4', '4bis'];
+app.put('/api/weeks', needAdmin, wrap(async (req, res) => {
+  const list = (Array.isArray(req.body.weeks) ? req.body.weeks : []).slice(0, 120);
+  for (const w of list) {
+    const start = str(w.start, 10), label = str(w.label, 10);
+    if (!isDate(start) || new Date(start + 'T12:00:00Z').getUTCDay() !== 1) return bad(res, 400, 'Settimana non valida.');
+    if (label && !WEEK_LABELS.includes(label)) return bad(res, 400, 'Valore non valido.');
+  }
+  for (const w of list) {
+    const start = str(w.start, 10), label = str(w.label, 10);
+    if (label) await db.q(`insert into week_labels (week_start, label) values ($1,$2) on conflict (week_start) do update set label = excluded.label`, [start, label]);
+    else await db.q('delete from week_labels where week_start = $1', [start]);
+  }
+  res.json({ ok: true });
 }));
 
 /* ---------- persone (admin) ---------- */
