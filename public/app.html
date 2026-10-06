@@ -56,7 +56,7 @@ svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-widt
 .brand-mark{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-fg);flex:none}
 .brand-mark svg{width:19px;height:19px}
 .brand h1{font:700 18px/1.1 var(--f-display);margin:0;letter-spacing:-.01em;white-space:nowrap}
-.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1;padding:2px}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:0 1 auto;padding:2px}
 .tabs::-webkit-scrollbar{display:none}
 .tab{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;background:none;padding:6px 12px;border-radius:999px;white-space:nowrap;color:var(--muted);font-weight:600;font-size:14px}
 .tab svg{width:16px;height:16px}
@@ -137,7 +137,7 @@ select.sm,input.sm{border:1px solid var(--line);background:var(--surface);border
 
 .side{display:flex;flex-direction:column;gap:14px;position:sticky;top:76px}
 .side .card{padding:16px}
-.side h3{font:700 17px/1.2 var(--f-display);margin:0 0 2px;text-transform:capitalize}
+.side h3{font:700 17px/1.2 var(--f-display);margin:0 0 2px}
 .side .sub{font-size:13px;color:var(--muted);margin:0 0 12px}
 .ev-list{display:flex;flex-direction:column;gap:8px}
 .ev{display:flex;gap:12px;align-items:stretch;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;text-align:left}
@@ -239,7 +239,7 @@ dialog::backdrop{background:rgba(20,8,12,.45);backdrop-filter:blur(2px)}
 }
 @media (max-width:720px){
   .brand h1{display:none}
-  .who b,.who span{display:none}
+  .who>span:not(.av){display:none}
   .who{padding:3px}
   main{padding-top:14px}
   .month-nav h2{font-size:22px;min-width:0}
@@ -481,7 +481,7 @@ function monthGrid(gs, ge) {
 function dayPanel() {
   const evs = onDay(S.sel);
   return `<div class="card" id="daypanel">
-    <h3>${esc(fmt(S.sel, { weekday: 'long', day: 'numeric', month: 'long' }))}</h3>
+    <h3>${esc(cap(fmt(S.sel, { weekday: 'long', day: 'numeric', month: 'long' })))}</h3>
     <p class="sub">${S.sel === today() ? 'Oggi · ' : ''}${evs.length ? `${evs.length} event${evs.length > 1 ? 'i' : 'o'}` : 'Nessun evento'}</p>
     <div class="ev-list">${evs.map(e => evCard(e, { day: S.sel })).join('')}</div>
     ${isAdmin() ? `<button class="btn sm" style="margin-top:${evs.length ? 10 : 0}px" data-new="${S.sel}">${ic('plus')}Aggiungi in questo giorno</button>` : ''}
@@ -570,7 +570,7 @@ function openEvent(id) {
   const maps = l?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.name + ' ' + l.address)}` : '';
   const sheet = openDialog(`<div class="detail c-${colorOf(e)}" style="display:contents">
     <div class="band"></div>
-    ${head(esc(e.title))}
+    ${head(esc(e.title), isAdmin() ? `<button class="btn icon ghost" data-dup title="Duplica" aria-label="Duplica">${ic('copy')}</button><button class="btn icon ghost" data-edit title="Modifica" aria-label="Modifica">${ic('edit')}</button>` : '')}
     <div class="sh-body">
       ${t ? `<div><span class="tag">${esc(t.name)}</span></div>` : ''}
       <div class="kv">${ic('clock')}<div><b>${esc(whenLabel(e))}</b></div></div>
@@ -581,8 +581,6 @@ function openEvent(id) {
     <div class="sh-foot">
       ${e.link ? `<a class="btn primary" href="${esc(e.link)}" target="_blank" rel="noopener">${ic('link')}Apri il link</a>` : ''}
       <a class="btn" href="/api/events/${e.id}/ics">${ic('dl')}Aggiungi al mio calendario</a>
-      <span class="spacer"></span>
-      ${isAdmin() ? `<button class="btn" data-dup>${ic('copy')}Duplica</button><button class="btn" data-edit>${ic('edit')}Modifica</button>` : ''}
     </div></div>`);
   if (isAdmin()) {
     $('[data-edit]', sheet).onclick = () => openForm(e);
@@ -804,7 +802,7 @@ function userForm(u) {
       <button class="btn primary" id="u-save">${isNew ? 'Crea accesso' : 'Salva'}</button>
     </div>`, { narrow: false });
   let role = v.role, userTouched = !isNew;
-  const roleUi = () => { $('#u-catsf', sheet).hidden = role === 'admin'; $('#u-rolehint', sheet).textContent = role === 'admin' ? 'Vede tutti gli eventi e gestisce eventi, persone e impostazioni.' : 'Vede solo il calendario, con gli eventi per lui.'; };
+  const roleUi = () => { $('#u-catsf', sheet).hidden = role === 'admin'; $('#u-rolehint', sheet).textContent = role === 'admin' ? 'Vede tutti gli eventi e gestisce eventi, persone e impostazioni.' : 'Vede solo il calendario, con gli eventi che lo riguardano.'; };
   roleUi();
   $('#u-name', sheet).oninput = ev => { if (!userTouched) $('#u-user', sheet).value = slug(ev.target.value); };
   $('#u-user', sheet).oninput = () => userTouched = true;
