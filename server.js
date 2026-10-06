@@ -344,6 +344,7 @@ app.get('/admin', (req, res) => res.redirect('/'));
 app.get('/', page('app.html'));
 app.get('/healthz', (req, res) => res.send('ok'));
 app.get('/manifest.webmanifest', (req, res) => res.sendFile(path.join(__dirname, 'public', 'manifest.webmanifest')));
+app.get('/logo.png', (req, res) => res.sendFile(path.join(__dirname, 'public', 'logo.png'), { maxAge: '7d' }));
 app.get('/icon.svg', (req, res) => res.sendFile(path.join(__dirname, 'public', 'icon.svg')));
 
 app.use((err, req, res, next) => {
