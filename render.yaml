@@ -1,0 +1,30 @@
+# Blueprint di Render: crea il sito e lo collega al database PostgreSQL già esistente del gruppo.
+# Su Render: New > Blueprint > scegli questo repository.
+services:
+  - type: web
+    name: calendario-eventi
+    runtime: node
+    region: oregon
+    # Prova gratuita: il sito si spegne dopo 15 minuti senza visite (riavvio in circa 1 minuto).
+    # Per l'uso quotidiano cambia in Starter dalla dashboard di Render.
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Database già esistente (mappa-protocolli-db): incolla la "Internal Database URL"
+      - key: DATABASE_URL
+        sync: false
+      # Le tabelle di questa app stanno nello schema "calendario", separate da quelle delle altre app
+      - key: DB_SCHEMA
+        value: calendario
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        sync: false

@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#B03A5B">
+<title>Calendario eventi</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: barra in alto (marchio, schede per l'admin, utente), poi la vista attiva.
+   Calendario: griglia del mese a sinistra, colonna "giorno scelto + prossimi eventi" a destra (sotto, sul telefono). */
+:root{
+  --bg:#F2EEEF; --dot:#DDD3D6; --surface:#FFFFFF; --surface-2:#F8F5F6; --surface-3:#F1ECEE; --fg:#1E1518; --muted:#6B5C61;
+  --line:#E6DCDF; --line-2:#EFE8EA; --accent:#B03A5B; --accent-soft:#F6E1E7; --accent-fg:#FFFFFF;
+  --danger:#B42318; --danger-soft:#FBE3E0; --ok:#1F7A4D; --ok-soft:#DDF1E6;
+  --shadow:0 1px 2px rgba(40,16,24,.05),0 8px 28px rgba(40,16,24,.09);
+  --teal:#0B6B63; --blue:#2F5FA8; --orange:#B4652A; --purple:#7A4FA0; --red:#B42340; --green:#3D7A2A; --pink:#B0458A; --slate:#4F5D6B;
+  --f-display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#171113; --dot:#2A2024; --surface:#211A1D; --surface-2:#2A2125; --surface-3:#30262A; --fg:#F1E8EB; --muted:#AE9CA2;
+  --line:#3A2E33; --line-2:#30262A; --accent:#E47C98; --accent-soft:#3D1F29; --accent-fg:#2A0B15;
+  --danger:#FF8A7A; --danger-soft:#3A1D1A; --ok:#6FD39C; --ok-soft:#173326;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  --teal:#4DBDB0; --blue:#7FA6E6; --orange:#E39A5F; --purple:#B99AD8; --red:#F07C8F; --green:#8CCB72; --pink:#E58AC4; --slate:#A3B1BF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#171113; --dot:#2A2024; --surface:#211A1D; --surface-2:#2A2125; --surface-3:#30262A; --fg:#F1E8EB; --muted:#AE9CA2;
+  --line:#3A2E33; --line-2:#30262A; --accent:#E47C98; --accent-soft:#3D1F29; --accent-fg:#2A0B15;
+  --danger:#FF8A7A; --danger-soft:#3A1D1A; --ok:#6FD39C; --ok-soft:#173326;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  --teal:#4DBDB0; --blue:#7FA6E6; --orange:#E39A5F; --purple:#B99AD8; --red:#F07C8F; --green:#8CCB72; --pink:#E58AC4; --slate:#A3B1BF; color-scheme:dark}
+.c-teal{--c:var(--teal)}.c-blue{--c:var(--blue)}.c-orange{--c:var(--orange)}.c-purple{--c:var(--purple)}
+.c-red{--c:var(--red)}.c-green{--c:var(--green)}.c-pink{--c:var(--pink)}.c-slate{--c:var(--slate)}
+
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);background-image:radial-gradient(var(--dot) 1.2px,transparent 1.3px);background-size:22px 22px;background-attachment:fixed;
+  color:var(--fg);font:15px/1.5 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[hidden]{display:none!important}
+
+/* barra in alto */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;padding:10px max(16px,env(safe-area-inset-left));
+  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand-mark{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-fg);flex:none}
+.brand-mark svg{width:19px;height:19px}
+.brand h1{font:700 18px/1.1 var(--f-display);margin:0;letter-spacing:-.01em;white-space:nowrap}
+.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1;padding:2px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:inline-flex;align-items:center;gap:7px;border:1px solid transparent;background:none;padding:6px 12px;border-radius:999px;white-space:nowrap;color:var(--muted);font-weight:600;font-size:14px}
+.tab svg{width:16px;height:16px}
+.tab:hover{background:var(--surface-2)}
+.tab.on{background:var(--accent-soft);color:var(--fg);border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.spacer{flex:1}
+.who{position:relative;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface-2);border-radius:999px;padding:3px 10px 3px 3px;font-size:13px;line-height:1.15;text-align:left;flex:none}
+.who b{display:block;font-weight:700;max-width:16ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who span{color:var(--muted)}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--accent-soft);color:var(--accent);flex:none}
+.av.admin{background:var(--accent);color:var(--accent-fg)}
+.menu{position:absolute;right:0;top:calc(100% + 6px);min-width:210px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;z-index:30}
+.menu button{display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;padding:9px 10px;border-radius:8px;text-align:left;font-weight:500}
+.menu button:hover{background:var(--surface-2)}
+
+/* comuni */
+main{max-width:1240px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left)) max(40px,env(safe-area-inset-bottom))}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--line);background:var(--surface);padding:7px 13px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap;text-decoration:none;color:inherit}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.06);background:var(--accent)}
+.btn.ghost{border-color:transparent;background:none}
+.btn.ghost:hover{background:var(--surface-2)}
+.btn.icon{padding:7px;width:36px;height:36px}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 35%,transparent)}
+.btn.danger.armed{background:var(--danger);color:var(--surface);border-color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.muted{color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap}
+button.chip:hover{border-color:color-mix(in srgb,var(--c,var(--accent)) 50%,var(--line))}
+.chip.on{background:color-mix(in srgb,var(--c,var(--accent)) 14%,var(--surface));border-color:color-mix(in srgb,var(--c,var(--accent)) 50%,transparent);color:var(--fg)}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--c,var(--accent))}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--c,var(--accent)) 14%,transparent);color:var(--c,var(--accent));white-space:nowrap}
+.tag.plain{background:var(--surface-3);color:var(--muted)}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--fg);font-size:16px;margin-bottom:4px}
+h2.view{font:700 26px/1.15 var(--f-display);letter-spacing:-.015em;margin:0}
+.head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.head p{margin:4px 0 0;color:var(--muted)}
+.seg{display:inline-flex;background:var(--surface-3);border-radius:10px;padding:3px;gap:2px}
+.seg button{border:none;background:none;padding:5px 12px;border-radius:8px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* calendario */
+.cal{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+.tb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.month-nav{display:flex;align-items:center;gap:4px}
+.month-nav h2{font:700 26px/1 var(--f-display);letter-spacing:-.02em;margin:0 8px 0 4px;min-width:7.5em;text-transform:capitalize}
+.filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filters .lbl{font-size:13px;color:var(--muted);font-weight:600;margin-right:2px}
+.preview{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600}
+select.sm,input.sm{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:5px 9px;font-size:13.5px}
+.grid{overflow:hidden}
+.dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--surface-2)}
+.dow span{padding:8px 10px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.weeks{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.day{position:relative;min-height:116px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);padding:6px 6px 8px;display:flex;flex-direction:column;gap:3px;cursor:pointer;background:var(--surface);text-align:left;border-top:none;border-left:none;font:inherit;min-width:0}
+.day:nth-child(7n){border-right:none}
+.day:hover{background:var(--surface-2)}
+.day.out{background:var(--surface-2)}
+.day.out .num{color:color-mix(in srgb,var(--muted) 60%,transparent)}
+.day.we .num{color:var(--muted)}
+.day .num{font-weight:700;font-size:13.5px;width:26px;height:26px;display:grid;place-items:center;border-radius:50%;margin-bottom:2px}
+.day.today .num{background:var(--accent);color:var(--accent-fg)}
+.day.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.pill{display:flex;align-items:center;gap:5px;min-width:0;border:none;border-radius:6px;padding:2px 6px;font-size:12.5px;line-height:1.35;text-align:left;
+  background:color-mix(in srgb,var(--c) 13%,var(--surface));color:var(--fg);border-left:3px solid var(--c)}
+.pill:hover{background:color-mix(in srgb,var(--c) 22%,var(--surface))}
+.pill .t{font-weight:700;color:var(--c);font-variant-numeric:tabular-nums;flex:none}
+.pill .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill.cont{border-left-style:dashed}
+.more{font-size:12px;font-weight:700;color:var(--muted);padding:1px 6px}
+.dots{display:none;gap:3px;justify-content:center;flex-wrap:wrap}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--c)}
+
+.side{display:flex;flex-direction:column;gap:14px;position:sticky;top:76px}
+.side .card{padding:16px}
+.side h3{font:700 17px/1.2 var(--f-display);margin:0 0 2px;text-transform:capitalize}
+.side .sub{font-size:13px;color:var(--muted);margin:0 0 12px}
+.ev-list{display:flex;flex-direction:column;gap:8px}
+.ev{display:flex;gap:12px;align-items:stretch;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;text-align:left}
+.ev:hover{border-color:color-mix(in srgb,var(--c) 45%,var(--line));background:color-mix(in srgb,var(--c) 4%,var(--surface))}
+.ev .bar{width:4px;border-radius:4px;background:var(--c);flex:none}
+.ev .body{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.ev .title{font-weight:700;line-height:1.3}
+.ev .meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted)}
+.ev .meta span{display:inline-flex;align-items:center;gap:5px}
+.ev .meta svg{width:14px;height:14px}
+.ev .date{flex:none;width:46px;text-align:center;border-radius:10px;background:var(--surface-3);padding:6px 0;display:flex;flex-direction:column;justify-content:center;line-height:1.05}
+.ev .date b{font:700 20px/1 var(--f-display)}
+.ev .date small{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+
+/* agenda */
+.agenda{display:flex;flex-direction:column;gap:22px}
+.ag-month h3{font:700 18px/1.2 var(--f-display);margin:0 0 10px;text-transform:capitalize}
+.ag-day{display:grid;grid-template-columns:76px minmax(0,1fr);gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.ag-day:first-of-type{border-top:none}
+.ag-date{line-height:1.1}
+.ag-date b{display:block;font:700 28px/1 var(--f-display)}
+.ag-date span{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ag-date.today b{color:var(--accent)}
+
+/* liste admin */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--line-2)}
+.row:first-child{border-top:none}
+.row .grow{flex:1;min-width:0}
+.row .title{font-weight:700}
+.row .meta{font-size:13px;color:var(--muted);display:flex;gap:4px 12px;flex-wrap:wrap;margin-top:2px}
+.row.off{opacity:.55}
+.row.click{cursor:pointer}
+.row.click:hover{background:var(--surface-2)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 10px;min-width:220px;flex:1;max-width:360px}
+.search input{border:none;background:none;outline:none;width:100%;padding:0}
+.settings{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.settings .card{padding:16px}
+.settings h3{font:700 18px/1.2 var(--f-display);margin:0}
+.settings p.sub{margin:4px 0 12px;font-size:13.5px;color:var(--muted)}
+.li{display:flex;align-items:center;gap:6px;padding:6px 0;border-top:1px solid var(--line-2)}
+.li:first-child{border-top:none}
+.li input{flex:1;min-width:0;border:1px solid transparent;background:none;border-radius:8px;padding:5px 7px}
+.li input:hover{border-color:var(--line)}
+.li input:focus{border-color:var(--accent);background:var(--surface-2);outline:none}
+.li .addr{font-size:13px;color:var(--muted)}
+.li .stack{flex:1;min-width:0;display:flex;flex-direction:column}
+.li .n{font-size:12px;color:var(--muted);white-space:nowrap}
+.swatch{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);background:var(--c);flex:none;padding:0}
+.palette{display:flex;gap:6px;flex-wrap:wrap;padding:4px 0}
+.palette button{width:24px;height:24px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);background:var(--c);padding:0}
+.palette button.on{box-shadow:0 0 0 2px var(--fg)}
+.addrow{display:flex;gap:6px;margin-top:10px}
+.addrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface-2);border-radius:9px;padding:7px 10px}
+
+/* finestra */
+dialog{border:none;padding:0;background:transparent;max-width:none;max-height:none;width:100%;height:100%;color:var(--fg)}
+dialog::backdrop{background:rgba(20,8,12,.45);backdrop-filter:blur(2px)}
+.sheet{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(620px,calc(100% - 24px));max-height:calc(100% - 32px);overflow:auto;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.sheet.narrow{width:min(440px,calc(100% - 24px))}
+.sh-head{display:flex;align-items:flex-start;gap:10px;padding:18px 20px 6px}
+.sh-head h3{font:700 22px/1.2 var(--f-display);margin:0;flex:1;letter-spacing:-.01em}
+.sh-body{padding:8px 20px 16px;display:flex;flex-direction:column;gap:14px}
+.sh-foot{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--surface);flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:13px;font-weight:700;color:var(--muted)}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:9px 11px;width:100%;min-width:0}
+.field textarea{resize:vertical;min-height:90px;line-height:1.45}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.field .hint{font-size:12.5px;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:12px}
+.check{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;cursor:pointer;user-select:none}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+.err{background:var(--danger-soft);color:var(--danger);border-radius:10px;padding:9px 12px;font-size:14px}
+.note{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;color:var(--muted)}
+.note b{color:var(--fg)}
+.cred{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;white-space:pre-wrap;background:var(--surface-3);border-radius:10px;padding:12px}
+
+/* dettaglio evento */
+.detail .kv{display:flex;gap:12px;align-items:flex-start}
+.detail .kv svg{width:20px;height:20px;color:var(--muted);margin-top:1px}
+.detail .kv b{display:block}
+.detail .kv a{color:var(--accent);font-weight:600}
+.detail .desc{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55}
+.detail .desc a{color:var(--accent)}
+.detail .band{height:6px;background:var(--c);border-radius:18px 18px 0 0;flex:none}
+
+.toast{position:fixed;left:50%;bottom:max(20px,env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:100;box-shadow:var(--shadow)}
+.loading{opacity:.55;pointer-events:none;transition:opacity .15s}
+
+@media (max-width:1060px){
+  .cal{grid-template-columns:minmax(0,1fr)}
+  .side{position:static}
+  .side .upcoming{display:none}
+  .settings{grid-template-columns:1fr 1fr}
+}
+@media (max-width:720px){
+  .brand h1{display:none}
+  .who b,.who span{display:none}
+  .who{padding:3px}
+  main{padding-top:14px}
+  .month-nav h2{font-size:22px;min-width:0}
+  .day{min-height:58px;padding:4px 2px 6px;align-items:center}
+  .day .pill,.day .more{display:none}
+  .dots{display:flex}
+  .dow span{padding:6px 2px;text-align:center;font-size:11px}
+  .settings{grid-template-columns:1fr}
+  .two,.three{grid-template-columns:1fr}
+  .ag-day{grid-template-columns:56px minmax(0,1fr);gap:10px}
+  .sheet{top:auto;bottom:0;transform:translateX(-50%);width:100%;border-radius:18px 18px 0 0;max-height:92%}
+  .row{flex-wrap:wrap}
+  .hide-m{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark"><svg viewBox="0 0 24 24" class="i" style="stroke-width:2"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></div>
+    <h1>Calendario eventi</h1>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Sezioni"></nav>
+  <div class="spacer"></div>
+  <button class="who" id="who" aria-haspopup="menu" aria-expanded="false"></button>
+</header>
+<main id="main"><div class="empty">Caricamento…</div></main>
+<dialog id="dlg"></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ============ utilità ============ */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const I = {
+  cal: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17.5 14.6c2.3.4 3.7 2 4 4.4"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  prev: '<path d="M15 18l-6-6 6-6"/>', next: '<path d="M9 18l6-6-6-6"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>', x: '<path d="M18 6L6 18M6 6l12 12"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  pin: '<path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  dl: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/>', out: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H4"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/>', up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
+  tag: '<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.3"/>', note: '<path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
+};
+const ic = (n, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+const COLORS = ['teal', 'blue', 'orange', 'purple', 'red', 'green', 'pink', 'slate'];
+const COLOR_NAMES = { teal: 'Verde acqua', blue: 'Blu', orange: 'Arancio', purple: 'Viola', red: 'Rosso', green: 'Verde', pink: 'Rosa', slate: 'Grigio' };
+
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const today = () => ymd(new Date());
+const fmt = (s, o) => new Intl.DateTimeFormat('it-IT', o).format(typeof s === 'string' ? parse(s) : s);
+const longDate = s => fmt(s, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+async function api(url, opt = {}) {
+  const r = await fetch(url, { credentials: 'same-origin', ...opt,
+    headers: opt.body ? { 'Content-Type': 'application/json' } : {}, body: opt.body ? JSON.stringify(opt.body) : undefined });
+  if (r.status === 401) { location.href = '/login'; throw new Error('Sessione scaduta'); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Operazione non riuscita.');
+  return j;
+}
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('cal.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('cal.' + k, JSON.stringify(v)); } catch {} },
+};
+
+/* ============ stato ============ */
+const S = {
+  me: null, categories: [], types: [], locations: [], users: [],
+  view: 'cal', mode: store.get('mode', 'month'),
+  cursor: (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })(),
+  sel: today(), events: [], range: null, typeFilter: new Set(store.get('types', [])), preview: '',
+  evFilter: { q: '', when: 'next', type: '', cat: '' }, userFilter: { q: '', cat: '' },
+};
+const isAdmin = () => S.me?.role === 'admin';
+const typeOf = id => S.types.find(t => t.id === id);
+const locOf = id => S.locations.find(l => l.id === id);
+const catName = id => S.categories.find(c => c.id === id)?.name || '';
+const colorOf = e => typeOf(e.typeId)?.color || 'slate';
+
+async function loadState() {
+  const s = await api('/api/state');
+  Object.assign(S, { me: s.me, categories: s.categories, types: s.types, locations: s.locations, users: s.users || [] });
+  for (const id of [...S.typeFilter]) if (!typeOf(id)) S.typeFilter.delete(id);
+}
+
+/* ============ intestazione ============ */
+function renderTop() {
+  const tabs = isAdmin() ? [['cal', 'Calendario', 'cal'], ['events', 'Eventi', 'list'], ['people', 'Persone', 'users'], ['settings', 'Impostazioni', 'gear']] : [];
+  $('#tabs').innerHTML = tabs.map(([k, l, i]) => `<button class="tab ${S.view === k ? 'on' : ''}" data-tab="${k}">${ic(i)}<span>${l}</span></button>`).join('');
+  const initials = (S.me.name || S.me.username).split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const myCats = S.me.categories.map(catName).filter(Boolean).join(', ');
+  $('#who').innerHTML = `<span class="av ${isAdmin() ? 'admin' : ''}">${esc(initials)}</span><span><b>${esc(S.me.name)}</b><span>${isAdmin() ? 'Amministratore' : esc(myCats || 'Staff')}</span></span>`;
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) go(b.dataset.tab); });
+$('#who').addEventListener('click', e => {
+  e.stopPropagation();
+  let m = $('.menu');
+  if (m) { m.remove(); $('#who').setAttribute('aria-expanded', 'false'); return; }
+  m = document.createElement('div'); m.className = 'menu'; m.setAttribute('role', 'menu');
+  m.innerHTML = `<button data-a="pw" role="menuitem">${ic('key')}Cambia password</button><button data-a="out" role="menuitem">${ic('out')}Esci</button>`;
+  m.addEventListener('click', ev => {
+    ev.stopPropagation(); const a = ev.target.closest('[data-a]')?.dataset.a; m.remove();
+    if (a === 'pw') passwordDialog();
+    if (a === 'out') api('/api/logout', { method: 'POST', body: {} }).finally(() => location.href = '/login');
+  });
+  $('#who').appendChild(m); $('#who').setAttribute('aria-expanded', 'true');
+});
+document.addEventListener('click', () => $('.menu')?.remove());
+
+function go(view) { S.view = view; renderTop(); render(); window.scrollTo(0, 0); }
+function render() {
+  ({ cal: renderCal, events: renderEvents, people: renderPeople, settings: renderSettings })[S.view]();
+}
+
+/* ============ eventi: caricamento e filtri ============ */
+async function ensureEvents(from, to) {
+  if (S.range && S.range[0] <= from && S.range[1] >= to) return;
+  const f = S.range ? (from < S.range[0] ? from : S.range[0]) : from, t = S.range ? (to > S.range[1] ? to : S.range[1]) : to;
+  const { events } = await api(`/api/events?from=${f}&to=${t}`);
+  S.events = events; S.range = [f, t];
+}
+async function reloadEvents() { const r = S.range; S.range = null; if (r) await ensureEvents(r[0], r[1]); }
+const sortEv = (a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0) || (b.allDay - a.allDay) || String(a.startTime || '').localeCompare(String(b.startTime || '')) || a.title.localeCompare(b.title);
+function shown(e) {
+  if (S.typeFilter.size && !S.typeFilter.has(e.typeId)) return false;
+  if (S.preview && !(e.allStaff || e.categories.includes(S.preview))) return false;
+  return true;
+}
+const onDay = (d) => S.events.filter(e => e.start <= d && e.end >= d && shown(e)).sort((a, b) => (b.allDay - a.allDay) || (a.start === d ? 0 : -1) - (b.start === d ? 0 : -1) || String(a.startTime || '').localeCompare(String(b.startTime || '')));
+function timeLabel(e, day) {
+  if (e.allDay) return 'Tutto il giorno';
+  if (e.start !== e.end && day && day !== e.start) return day === e.end && e.endTime ? `fino alle ${e.endTime}` : 'In corso';
+  return e.endTime ? `${e.startTime} – ${e.endTime}` : `ore ${e.startTime}`;
+}
+function whenLabel(e) {
+  const multi = e.start !== e.end;
+  if (multi) {
+    const a = fmt(e.start, { weekday: 'short', day: 'numeric', month: 'long' }), b = fmt(e.end, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+    return e.allDay ? `Da ${a} a ${b}` : `Da ${a}, ore ${e.startTime} a ${b}${e.endTime ? ', ore ' + e.endTime : ''}`;
+  }
+  return cap(longDate(e.start)) + (e.allDay ? ' · tutto il giorno' : ` · ${e.endTime ? e.startTime + ' – ' + e.endTime : 'ore ' + e.startTime}`);
+}
+function placeLabel(e) { const l = locOf(e.locationId); return [l?.name, e.locationNote].filter(Boolean).join(' · '); }
+function audienceLabel(e) { return e.allStaff ? 'Tutto lo staff' : e.categories.map(catName).filter(Boolean).join(', '); }
+
+function evCard(e, { withDate = false, day = null } = {}) {
+  const t = typeOf(e.typeId), place = placeLabel(e);
+  return `<button class="ev c-${colorOf(e)}" data-ev="${e.id}">
+    ${withDate ? `<span class="date"><small>${fmt(e.start, { weekday: 'short' })}</small><b>${parse(e.start).getDate()}</b><small>${fmt(e.start, { month: 'short' })}</small></span>` : '<span class="bar"></span>'}
+    <span class="body">
+      <span class="title">${esc(e.title)}</span>
+      <span class="meta">
+        ${t ? `<span class="tag">${esc(t.name)}</span>` : ''}
+        <span>${ic('clock')}${esc(timeLabel(e, day))}</span>
+        ${place ? `<span>${ic('pin')}${esc(place)}</span>` : ''}
+        ${isAdmin() ? `<span>${ic('eye')}${esc(audienceLabel(e))}</span>` : ''}
+      </span>
+    </span>
+  </button>`;
+}
+
+/* ============ vista calendario ============ */
+function gridRange() {
+  const first = S.cursor, start = addDays(first, -((first.getDay() + 6) % 7));
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+  const end = addDays(last, 6 - ((last.getDay() + 6) % 7));
+  return [start, end];
+}
+async function renderCal() {
+  const main = $('#main');
+  const [gs, ge] = gridRange();
+  const agendaEnd = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + 3, 0);
+  const from = ymd(gs), to = ymd(S.mode === 'agenda' ? agendaEnd : ge);
+  const upTo = ymd(addDays(new Date(), 120));
+  main.classList.add('loading');
+  try { await ensureEvents(from < today() ? from : today(), to > upTo ? to : upTo); }
+  catch (e) { main.classList.remove('loading'); main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+  main.classList.remove('loading');
+
+  const title = S.mode === 'agenda'
+    ? `${fmt(S.cursor, { month: 'short' })} – ${fmt(agendaEnd, { month: 'short', year: 'numeric' })}`
+    : fmt(S.cursor, { month: 'long', year: 'numeric' });
+  const typeChips = S.types.map(t => `<button class="chip c-${t.color} ${S.typeFilter.has(t.id) ? 'on' : ''}" data-type="${t.id}"><span class="dot"></span>${esc(t.name)}</button>`).join('');
+  main.innerHTML = `
+  <div class="cal">
+    <section>
+      <div class="tb">
+        <div class="month-nav">
+          <button class="btn icon ghost" data-nav="-1" aria-label="Mese precedente">${ic('prev')}</button>
+          <button class="btn icon ghost" data-nav="1" aria-label="Mese successivo">${ic('next')}</button>
+          <h2>${esc(title)}</h2>
+        </div>
+        <button class="btn sm" data-nav="0">Oggi</button>
+        <div class="spacer"></div>
+        <div class="seg" role="group" aria-label="Vista"><button data-mode="month" class="${S.mode === 'month' ? 'on' : ''}">Mese</button><button data-mode="agenda" class="${S.mode === 'agenda' ? 'on' : ''}">Elenco</button></div>
+        ${isAdmin() ? `<button class="btn primary" data-new>${ic('plus')}Nuovo evento</button>` : ''}
+      </div>
+      <div class="filters">
+        ${S.types.length ? `<span class="lbl">Tipo</span>${typeChips}` : ''}
+        ${S.typeFilter.size ? `<button class="btn sm ghost" data-clear>Mostra tutti</button>` : ''}
+        ${isAdmin() ? `<span class="spacer"></span><label class="preview">${ic('eye')}Vedi come
+          <select class="sm" id="preview"><option value="">Amministratore (tutto)</option>${S.categories.map(c => `<option value="${c.id}" ${S.preview === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>` : ''}
+      </div>
+      ${S.mode === 'month' ? monthGrid(gs, ge) : agendaList(ymd(S.cursor), ymd(agendaEnd))}
+    </section>
+    ${S.mode === 'month' ? `<aside class="side">${dayPanel()}${upcomingPanel()}</aside>` : `<aside class="side hide-m">${upcomingPanel(true)}</aside>`}
+  </div>`;
+}
+function monthGrid(gs, ge) {
+  const dows = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+  let cells = '';
+  for (let d = new Date(gs); d <= ge; d = addDays(d, 1)) {
+    const k = ymd(d), evs = onDay(k), out = d.getMonth() !== S.cursor.getMonth(), we = d.getDay() === 0 || d.getDay() === 6;
+    const max = 3, pills = evs.slice(0, evs.length > max ? max - 1 : max).map(e =>
+      `<span class="pill c-${colorOf(e)} ${e.start !== k ? 'cont' : ''}" data-ev="${e.id}" role="button" tabindex="-1">${!e.allDay && e.start === k ? `<span class="t">${e.startTime}</span>` : ''}<span class="n">${esc(e.title)}</span></span>`).join('');
+    const more = evs.length > max ? `<span class="more">+${evs.length - max + 1} altri</span>` : '';
+    const dots = evs.length ? `<span class="dots">${evs.slice(0, 4).map(e => `<i class="c-${colorOf(e)}"></i>`).join('')}</span>` : '';
+    const label = `${fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}${evs.length ? `, ${evs.length} event${evs.length > 1 ? 'i' : 'o'}` : ''}`;
+    cells += `<button class="day ${out ? 'out' : ''} ${we ? 'we' : ''} ${k === today() ? 'today' : ''} ${k === S.sel ? 'sel' : ''}" data-day="${k}" aria-label="${esc(label)}"><span class="num">${d.getDate()}</span>${pills}${more}${dots}</button>`;
+  }
+  return `<div class="card grid"><div class="dow">${dows.map(x => `<span>${x}</span>`).join('')}</div><div class="weeks">${cells}</div></div>`;
+}
+function dayPanel() {
+  const evs = onDay(S.sel);
+  return `<div class="card" id="daypanel">
+    <h3>${esc(fmt(S.sel, { weekday: 'long', day: 'numeric', month: 'long' }))}</h3>
+    <p class="sub">${S.sel === today() ? 'Oggi · ' : ''}${evs.length ? `${evs.length} event${evs.length > 1 ? 'i' : 'o'}` : 'Nessun evento'}</p>
+    <div class="ev-list">${evs.map(e => evCard(e, { day: S.sel })).join('')}</div>
+    ${isAdmin() ? `<button class="btn sm" style="margin-top:${evs.length ? 10 : 0}px" data-new="${S.sel}">${ic('plus')}Aggiungi in questo giorno</button>` : ''}
+  </div>`;
+}
+function upcomingPanel(all) {
+  const t = today();
+  const evs = S.events.filter(e => e.end >= t && shown(e)).sort(sortEv).slice(0, all ? 12 : 6);
+  return `<div class="card upcoming"><h3>Prossimi eventi</h3><p class="sub">${evs.length ? 'Dai prossimi giorni' : 'Nessun evento in programma nei prossimi mesi'}</p>
+    <div class="ev-list">${evs.map(e => evCard(e, { withDate: true })).join('')}</div></div>`;
+}
+function agendaList(from, to) {
+  const evs = S.events.filter(e => e.end >= from && e.start <= to && shown(e));
+  const days = {};
+  for (const e of evs) {
+    // un evento di più giorni compare nel primo giorno visibile del periodo
+    const k = e.start < from ? from : e.start;
+    (days[k] ||= []).push(e);
+  }
+  const keys = Object.keys(days).sort();
+  if (!keys.length) return `<div class="card empty"><b>Nessun evento</b>In questo periodo non ci sono eventi${S.typeFilter.size || S.preview ? ' con i filtri scelti' : ''}.</div>`;
+  const months = {};
+  for (const k of keys) (months[k.slice(0, 7)] ||= []).push(k);
+  return `<div class="agenda">${Object.entries(months).map(([m, ks]) => `<div class="ag-month card" style="padding:16px 18px">
+    <h3>${esc(fmt(m + '-01', { month: 'long', year: 'numeric' }))}</h3>
+    ${ks.map(k => `<div class="ag-day"><div class="ag-date ${k === today() ? 'today' : ''}"><b>${parse(k).getDate()}</b><span>${esc(fmt(k, { weekday: 'short' }))}</span></div>
+      <div class="ev-list">${days[k].sort(sortEv).map(e => evCard(e, { day: k })).join('')}</div></div>`).join('')}
+  </div>`).join('')}</div>`;
+}
+$('#main').addEventListener('click', e => {
+  if (S.view !== 'cal') return;
+  const t = e.target;
+  const ev = t.closest('[data-ev]');
+  if (ev) { e.stopPropagation(); return openEvent(ev.dataset.ev); }
+  const nav = t.closest('[data-nav]');
+  if (nav) {
+    const n = +nav.dataset.nav;
+    if (n === 0) { const d = new Date(); S.cursor = new Date(d.getFullYear(), d.getMonth(), 1); S.sel = today(); }
+    else S.cursor = new Date(S.cursor.getFullYear(), S.cursor.getMonth() + n, 1);
+    return renderCal();
+  }
+  const mode = t.closest('[data-mode]');
+  if (mode) { S.mode = mode.dataset.mode; store.set('mode', S.mode); return renderCal(); }
+  const ty = t.closest('[data-type]');
+  if (ty) { const id = ty.dataset.type; S.typeFilter.has(id) ? S.typeFilter.delete(id) : S.typeFilter.add(id); store.set('types', [...S.typeFilter]); return renderCal(); }
+  if (t.closest('[data-clear]')) { S.typeFilter.clear(); store.set('types', []); return renderCal(); }
+  const nw = t.closest('[data-new]');
+  if (nw) return openForm(null, nw.dataset.new || (S.sel >= today() ? S.sel : today()));
+  const day = t.closest('[data-day]');
+  if (day) {
+    S.sel = day.dataset.day;
+    const d = parse(S.sel);
+    if (d.getMonth() !== S.cursor.getMonth()) { S.cursor = new Date(d.getFullYear(), d.getMonth(), 1); return renderCal(); }
+    document.querySelectorAll('.day.sel').forEach(x => x.classList.remove('sel')); day.classList.add('sel');
+    $('#daypanel').outerHTML = dayPanel();
+    if (matchMedia('(max-width:1060px)').matches) $('#daypanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+});
+$('#main').addEventListener('change', e => { if (e.target.id === 'preview') { S.preview = e.target.value; renderCal(); } });
+
+/* ============ finestre ============ */
+const dlg = $('#dlg');
+function openDialog(html, { narrow = false, onClose } = {}) {
+  dlg.innerHTML = `<div class="sheet ${narrow ? 'narrow' : ''}">${html}</div>`;
+  dlg.onclose = () => { dlg.innerHTML = ''; onClose?.(); };
+  if (!dlg.open) dlg.showModal();
+  return $('.sheet', dlg);
+}
+const closeDialog = () => dlg.open && dlg.close();
+dlg.addEventListener('click', e => { if (e.target === dlg) closeDialog(); if (e.target.closest('[data-close]')) closeDialog(); });
+const head = (title, extra = '') => `<div class="sh-head"><h3>${title}</h3>${extra}<button class="btn icon ghost" data-close aria-label="Chiudi">${ic('x')}</button></div>`;
+// pulsante "Elimina" a due tocchi: il primo arma, il secondo conferma
+function armed(btn, fn, label = 'Conferma eliminazione') {
+  btn.addEventListener('click', () => {
+    if (!btn.classList.contains('armed')) { btn.dataset.orig = btn.innerHTML; btn.classList.add('armed'); btn.innerHTML = ic('trash') + label; setTimeout(() => { if (btn.isConnected) { btn.classList.remove('armed'); btn.innerHTML = btn.dataset.orig; } }, 4000); return; }
+    fn();
+  });
+}
+const linkify = s => esc(s).replace(/(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"])/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+
+/* ============ dettaglio evento ============ */
+function openEvent(id) {
+  const e = S.events.find(x => x.id === id);
+  if (!e) return;
+  const t = typeOf(e.typeId), l = locOf(e.locationId);
+  const maps = l?.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.name + ' ' + l.address)}` : '';
+  const sheet = openDialog(`<div class="detail c-${colorOf(e)}" style="display:contents">
+    <div class="band"></div>
+    ${head(esc(e.title))}
+    <div class="sh-body">
+      ${t ? `<div><span class="tag">${esc(t.name)}</span></div>` : ''}
+      <div class="kv">${ic('clock')}<div><b>${esc(whenLabel(e))}</b></div></div>
+      ${l || e.locationNote ? `<div class="kv">${ic('pin')}<div>${l ? `<b>${esc(l.name)}</b>${l.address ? `<span class="muted">${esc(l.address)}</span> · <a href="${maps}" target="_blank" rel="noopener">Mappa</a>` : ''}` : ''}${e.locationNote ? `<div class="${l ? 'muted' : ''}">${l ? '' : '<b>'}${linkify(e.locationNote)}${l ? '' : '</b>'}</div>` : ''}</div></div>` : ''}
+      ${isAdmin() ? `<div class="kv">${ic('eye')}<div><b>Chi lo vede</b><span class="muted">${esc(audienceLabel(e))}</span></div></div>` : ''}
+      ${e.description ? `<div class="kv">${ic('note')}<div class="desc">${linkify(e.description)}</div></div>` : ''}
+    </div>
+    <div class="sh-foot">
+      ${e.link ? `<a class="btn primary" href="${esc(e.link)}" target="_blank" rel="noopener">${ic('link')}Apri il link</a>` : ''}
+      <a class="btn" href="/api/events/${e.id}/ics">${ic('dl')}Aggiungi al mio calendario</a>
+      <span class="spacer"></span>
+      ${isAdmin() ? `<button class="btn" data-dup>${ic('copy')}Duplica</button><button class="btn" data-edit>${ic('edit')}Modifica</button>` : ''}
+    </div></div>`);
+  if (isAdmin()) {
+    $('[data-edit]', sheet).onclick = () => openForm(e);
+    $('[data-dup]', sheet).onclick = () => openForm({ ...e, id: null, title: e.title + ' (copia)' });
+  }
+}
+
+/* ============ modulo evento (admin) ============ */
+function openForm(e, date) {
+  const isNew = !e?.id;
+  const v = e || { title: '', typeId: S.types[0]?.id || '', locationId: '', locationNote: '', start: date || today(), end: date || today(),
+    allDay: false, startTime: '09:00', endTime: '13:00', description: '', link: '', allStaff: true, categories: [] };
+  const cats = new Set(v.categories);
+  const sheet = openDialog(`
+    ${head(isNew ? 'Nuovo evento' : 'Modifica evento')}
+    <form class="sh-body" id="evf" novalidate>
+      <div class="err" id="ferr" hidden></div>
+      <label class="field"><span>Titolo</span><input name="title" value="${esc(v.title)}" maxlength="160" placeholder="Es. Corso di primo soccorso" required></label>
+      <div class="two">
+        <label class="field"><span>Tipo di evento</span><select name="typeId"><option value="">— Nessun tipo —</option>${S.types.map(t => `<option value="${t.id}" ${t.id === v.typeId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
+        <div class="field"><span>Sede</span>
+          <div style="display:flex;gap:6px"><select name="locationId" style="flex:1"><option value="">— Nessuna sede —</option>${S.locations.map(l => `<option value="${l.id}" ${l.id === v.locationId ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select>
+          <button type="button" class="btn icon" id="addloc" title="Aggiungi una sede" aria-label="Aggiungi una sede">${ic('plus')}</button></div>
+          <div id="newloc" hidden style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+            <input id="nl-name" placeholder="Nome della sede, es. Studio Cagliari centro"><input id="nl-addr" placeholder="Indirizzo (facoltativo)">
+            <div style="display:flex;gap:6px"><button type="button" class="btn sm primary" id="nl-save">Aggiungi sede</button><button type="button" class="btn sm ghost" id="nl-cancel">Annulla</button></div>
+          </div>
+        </div>
+      </div>
+      <label class="field"><span>Note sul luogo <small class="muted" style="font-weight:500">(facoltativo)</small></span><input name="locationNote" value="${esc(v.locationNote)}" maxlength="200" placeholder="Es. Sala riunioni, 2° piano · oppure: Online su Zoom"></label>
+      <label class="check"><input type="checkbox" name="allDay" ${v.allDay ? 'checked' : ''}>Tutto il giorno</label>
+      <div class="two">
+        <label class="field"><span>Data</span><input type="date" name="start" value="${v.start}" required></label>
+        <label class="field"><span>Fino al <small class="muted" style="font-weight:500">(per eventi di più giorni)</small></span><input type="date" name="end" value="${v.end !== v.start ? v.end : ''}" min="${v.start}"></label>
+      </div>
+      <div class="two" id="times" ${v.allDay ? 'hidden' : ''}>
+        <label class="field"><span>Ora di inizio</span><input type="time" name="startTime" value="${v.startTime || ''}" step="300"></label>
+        <label class="field"><span>Ora di fine</span><input type="time" name="endTime" value="${v.endTime || ''}" step="300"></label>
+      </div>
+      <div class="field"><span>Chi può vederlo</span>
+        <div class="seg" style="align-self:flex-start"><button type="button" data-aud="all" class="${v.allStaff ? 'on' : ''}">Tutto lo staff</button><button type="button" data-aud="some" class="${v.allStaff ? '' : 'on'}">Solo alcune categorie</button></div>
+        <div class="chips" id="cats" style="margin-top:4px" ${v.allStaff ? 'hidden' : ''}>${S.categories.map(c => `<button type="button" class="chip ${cats.has(c.id) ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+        <span class="hint" id="reach"></span>
+      </div>
+      <label class="field"><span>Descrizione <small class="muted" style="font-weight:500">(facoltativa)</small></span><textarea name="description" maxlength="5000" placeholder="Programma, relatori, cosa portare…">${esc(v.description)}</textarea></label>
+      <label class="field"><span>Link <small class="muted" style="font-weight:500">(iscrizione, videochiamata, materiale)</small></span><input name="link" value="${esc(v.link)}" maxlength="500" placeholder="https://…" inputmode="url"></label>
+    </form>
+    <div class="sh-foot">
+      ${isNew ? '' : `<button class="btn danger" id="del">${ic('trash')}Elimina</button>`}
+      <span class="spacer"></span>
+      <button class="btn ghost" data-close>Annulla</button>
+      <button class="btn primary" id="save">${isNew ? 'Crea evento' : 'Salva modifiche'}</button>
+    </div>`);
+  const f = $('#evf', sheet);
+  let allStaff = v.allStaff;
+  const reach = () => {
+    const staff = S.users.filter(u => u.active && u.role === 'staff');
+    const n = allStaff ? staff.length : staff.filter(u => u.categories.some(c => cats.has(c))).length;
+    $('#reach', sheet).textContent = !allStaff && !cats.size ? 'Scegli almeno una categoria.' : `Lo vedranno ${n} ${n === 1 ? 'persona' : 'persone'} dello staff, oltre agli amministratori.`;
+  };
+  reach();
+  sheet.addEventListener('click', ev => {
+    const a = ev.target.closest('[data-aud]');
+    if (a) { allStaff = a.dataset.aud === 'all'; sheet.querySelectorAll('[data-aud]').forEach(b => b.classList.toggle('on', b === a)); $('#cats', sheet).hidden = allStaff; reach(); }
+    const c = ev.target.closest('[data-cat]');
+    if (c) { cats.has(c.dataset.cat) ? cats.delete(c.dataset.cat) : cats.add(c.dataset.cat); c.classList.toggle('on'); reach(); }
+  });
+  f.allDay.onchange = () => $('#times', sheet).hidden = f.allDay.checked;
+  f.start.onchange = () => { f.end.min = f.start.value; if (f.end.value && f.end.value < f.start.value) f.end.value = ''; };
+  f.startTime.onchange = () => {
+    if (!f.endTime.value || f.endTime.value <= f.startTime.value) {
+      const [h, m] = f.startTime.value.split(':').map(Number); if (isNaN(h)) return;
+      const x = Math.min(h * 60 + m + 60, 23 * 60 + 55); f.endTime.value = `${pad(Math.floor(x / 60))}:${pad(x % 60)}`;
+    }
+  };
+  // nuova sede direttamente dal modulo
+  const nl = $('#newloc', sheet);
+  $('#addloc', sheet).onclick = () => { nl.hidden = false; $('#nl-name', sheet).focus(); };
+  $('#nl-cancel', sheet).onclick = () => nl.hidden = true;
+  $('#nl-save', sheet).onclick = async () => {
+    const name = $('#nl-name', sheet).value.trim(), address = $('#nl-addr', sheet).value.trim();
+    if (!name) return $('#nl-name', sheet).focus();
+    try {
+      const { id } = await api('/api/locations', { method: 'POST', body: { name, address } });
+      S.locations.push({ id, name, address });
+      f.locationId.insertAdjacentHTML('beforeend', `<option value="${id}">${esc(name)}</option>`); f.locationId.value = id;
+      nl.hidden = true; $('#nl-name', sheet).value = ''; $('#nl-addr', sheet).value = '';
+    } catch (x) { toast(x.message); }
+  };
+  const err = m => { const el = $('#ferr', sheet); el.textContent = m; el.hidden = false; sheet.scrollTop = 0; };
+  $('#save', sheet).onclick = async () => {
+    const body = { title: f.title.value, typeId: f.typeId.value, locationId: f.locationId.value, locationNote: f.locationNote.value,
+      start: f.start.value, end: f.end.value || f.start.value, allDay: f.allDay.checked, startTime: f.startTime.value, endTime: f.endTime.value,
+      description: f.description.value, link: f.link.value, allStaff, categories: [...cats] };
+    const btn = $('#save', sheet); btn.disabled = true;
+    try {
+      if (isNew) await api('/api/events', { method: 'POST', body }); else await api('/api/events/' + e.id, { method: 'PUT', body });
+      closeDialog(); await reloadEvents();
+      if (S.view === 'cal') { S.sel = body.start; const d = parse(body.start); S.cursor = new Date(d.getFullYear(), d.getMonth(), 1); }
+      render(); toast(isNew ? 'Evento creato' : 'Modifiche salvate');
+    } catch (x) { err(x.message); btn.disabled = false; }
+  };
+  if (!isNew) armed($('#del', sheet), async () => {
+    try { await api('/api/events/' + e.id, { method: 'DELETE' }); closeDialog(); await reloadEvents(); render(); toast('Evento eliminato'); } catch (x) { err(x.message); }
+  });
+  if (isNew) setTimeout(() => f.title.focus(), 50);
+}
+
+/* ============ elenco eventi (admin) ============ */
+async function renderEvents() {
+  const main = $('#main');
+  const from = ymd(addDays(new Date(), -400)), to = ymd(addDays(new Date(), 800));
+  main.classList.add('loading');
+  try { await ensureEvents(from, to); } catch (e) { main.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; } finally { main.classList.remove('loading'); }
+  const F = S.evFilter;
+  main.innerHTML = `
+    <div class="head"><div><h2 class="view">Eventi</h2><p>Tutti gli eventi, con chi può vederli.</p></div><span class="spacer"></span><button class="btn primary" data-new>${ic('plus')}Nuovo evento</button></div>
+    <div class="toolbar">
+      <label class="search">${ic('search')}<input id="evq" placeholder="Cerca per titolo, sede, descrizione" value="${esc(F.q)}"></label>
+      <div class="seg"><button data-when="next" class="${F.when === 'next' ? 'on' : ''}">In programma</button><button data-when="past" class="${F.when === 'past' ? 'on' : ''}">Passati</button></div>
+      <select class="sm" id="evtype"><option value="">Tutti i tipi</option>${S.types.map(t => `<option value="${t.id}" ${F.type === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+      <select class="sm" id="evcat"><option value="">Tutte le categorie</option>${S.categories.map(c => `<option value="${c.id}" ${F.cat === c.id ? 'selected' : ''}>Visibili a ${esc(c.name)}</option>`).join('')}</select>
+    </div>
+    <div class="card" id="evrows"></div>`;
+  drawEventRows();
+}
+function drawEventRows() {
+  const F = S.evFilter, t = today(), q = F.q.trim().toLowerCase();
+  let list = S.events.filter(e => (F.when === 'next' ? e.end >= t : e.end < t)
+    && (!F.type || e.typeId === F.type) && (!F.cat || e.allStaff || e.categories.includes(F.cat))
+    && (!q || [e.title, e.description, e.locationNote, locOf(e.locationId)?.name].join(' ').toLowerCase().includes(q)));
+  list.sort(sortEv); if (F.when === 'past') list.reverse();
+  $('#evrows').innerHTML = list.length ? `<div class="rows">${list.map(e => `<div class="row click" data-edit="${e.id}">${evDate(e)}
+      <div class="grow"><div class="title">${esc(e.title)}</div>
+        <div class="meta">${typeOf(e.typeId) ? `<span class="tag c-${colorOf(e)}">${esc(typeOf(e.typeId).name)}</span>` : ''}<span>${esc(e.start !== e.end ? whenLabel(e) : timeLabel(e))}</span>${placeLabel(e) ? `<span>${ic('pin', 'i hide-m')} ${esc(placeLabel(e))}</span>` : ''}</div>
+        <div class="meta" style="margin-top:6px">${e.allStaff ? '<span class="tag plain">Tutto lo staff</span>' : e.categories.map(c => `<span class="tag plain">${esc(catName(c))}</span>`).join('')}</div></div>
+      <button class="btn icon ghost" data-dupe="${e.id}" title="Duplica" aria-label="Duplica">${ic('copy')}</button>
+    </div>`).join('')}</div>`
+    : `<div class="empty"><b>Nessun evento</b>${F.when === 'next' ? 'Non ci sono eventi in programma con questi filtri.' : 'Nessun evento passato con questi filtri.'}</div>`;
+}
+const evDate = e => `<span class="ev" style="all:unset;flex:none"><span class="date" style="width:52px;text-align:center;border-radius:10px;background:var(--surface-3);padding:6px 0;display:flex;flex-direction:column;line-height:1.05">
+  <small style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">${fmt(e.start, { weekday: 'short' })}</small><b style="font:700 20px/1 var(--f-display)">${parse(e.start).getDate()}</b><small style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">${fmt(e.start, { month: 'short' })}</small></span></span>`;
+$('#main').addEventListener('click', e => {
+  if (S.view !== 'events') return;
+  if (e.target.closest('[data-new]')) return openForm(null, today());
+  const w = e.target.closest('[data-when]'); if (w) { S.evFilter.when = w.dataset.when; return renderEvents(); }
+  const d = e.target.closest('[data-dupe]'); if (d) { const ev = S.events.find(x => x.id === d.dataset.dupe); return openForm({ ...ev, id: null, title: ev.title + ' (copia)' }); }
+  const r = e.target.closest('[data-edit]'); if (r) openForm(S.events.find(x => x.id === r.dataset.edit));
+});
+$('#main').addEventListener('input', e => { if (S.view === 'events' && e.target.id === 'evq') { S.evFilter.q = e.target.value; drawEventRows(); } if (S.view === 'people' && e.target.id === 'uq') { S.userFilter.q = e.target.value; drawPeople(); } });
+$('#main').addEventListener('change', e => {
+  if (S.view === 'events' && e.target.id === 'evtype') { S.evFilter.type = e.target.value; drawEventRows(); }
+  if (S.view === 'events' && e.target.id === 'evcat') { S.evFilter.cat = e.target.value; drawEventRows(); }
+  if (S.view === 'people' && e.target.id === 'ucat') { S.userFilter.cat = e.target.value; drawPeople(); }
+});
+
+/* ============ persone (admin) ============ */
+function renderPeople() {
+  const staff = S.users.filter(u => u.role === 'staff' && u.active).length;
+  $('#main').innerHTML = `
+    <div class="head"><div><h2 class="view">Persone</h2><p>Accessi dello staff e categorie di appartenenza. ${staff} ${staff === 1 ? 'accesso attivo' : 'accessi attivi'}.</p></div><span class="spacer"></span><button class="btn primary" data-newuser>${ic('plus')}Nuovo accesso</button></div>
+    <div class="toolbar">
+      <label class="search">${ic('search')}<input id="uq" placeholder="Cerca per nome o nome utente" value="${esc(S.userFilter.q)}"></label>
+      <select class="sm" id="ucat"><option value="">Tutte le categorie</option>${S.categories.map(c => `<option value="${c.id}" ${S.userFilter.cat === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="_none" ${S.userFilter.cat === '_none' ? 'selected' : ''}>Senza categoria</option></select>
+    </div>
+    <div class="card" id="urows"></div>`;
+  drawPeople();
+}
+function drawPeople() {
+  const q = S.userFilter.q.trim().toLowerCase(), c = S.userFilter.cat;
+  const list = S.users.filter(u => (!q || (u.name + ' ' + u.username).toLowerCase().includes(q))
+    && (!c || (c === '_none' ? !u.categories.length && u.role === 'staff' : u.categories.includes(c))));
+  $('#urows').innerHTML = list.length ? `<div class="rows">${list.map(u => {
+    const ini = (u.name || u.username).split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    return `<div class="row click ${u.active ? '' : 'off'}" data-user="${u.id}">
+      <span class="av ${u.role === 'admin' ? 'admin' : ''}">${esc(ini)}</span>
+      <div class="grow"><div class="title">${esc(u.name)} ${u.active ? '' : '<span class="tag plain">Disattivato</span>'}</div>
+        <div class="meta"><span>${esc(u.username)}</span><span>${u.role === 'admin' ? 'Amministratore' : 'Staff'}</span><span>${u.lastLogin ? 'Ultimo accesso ' + esc(fmt(u.lastLogin.slice(0, 10), { day: 'numeric', month: 'short' })) : 'Mai entrato'}</span></div></div>
+      <div class="chips hide-m" style="justify-content:flex-end;max-width:45%">${u.role === 'admin' ? '<span class="tag plain">Vede tutto</span>' : u.categories.length ? u.categories.map(c => `<span class="tag plain">${esc(catName(c))}</span>`).join('') : '<span class="tag c-red">Nessuna categoria</span>'}</div>
+    </div>`; }).join('')}</div>` : '<div class="empty"><b>Nessuna persona</b>Nessun accesso corrisponde alla ricerca.</div>';
+}
+$('#main').addEventListener('click', e => {
+  if (S.view !== 'people') return;
+  if (e.target.closest('[data-newuser]')) return userForm(null);
+  const r = e.target.closest('[data-user]'); if (r) userForm(S.users.find(u => u.id === r.dataset.user));
+});
+const genPassword = () => { const a = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'; const b = new Uint32Array(10); crypto.getRandomValues(b); return [...b].map(x => a[x % a.length]).join(''); };
+const slug = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '.').replace(/^\.|\.$/g, '');
+function userForm(u) {
+  const isNew = !u;
+  const v = u || { name: '', username: '', role: 'staff', active: true, categories: [] };
+  const cats = new Set(v.categories);
+  const sheet = openDialog(`
+    ${head(isNew ? 'Nuovo accesso' : esc(v.name))}
+    <div class="sh-body">
+      <div class="err" id="uerr" hidden></div>
+      ${v.fromEnv ? '<div class="note"><b>Amministratore principale.</b> Nome utente e password si cambiano dalle impostazioni di Render (ADMIN_USERNAME, ADMIN_PASSWORD).</div>' : ''}
+      <div class="two">
+        <label class="field"><span>Nome e cognome</span><input id="u-name" value="${esc(v.name)}" maxlength="120" placeholder="Es. Maria Rossi"></label>
+        <label class="field"><span>Nome utente</span><input id="u-user" value="${esc(v.username)}" maxlength="60" autocapitalize="none" spellcheck="false" placeholder="maria.rossi" ${v.fromEnv ? 'disabled' : ''}></label>
+      </div>
+      ${v.fromEnv ? '' : `<label class="field"><span>${isNew ? 'Password' : 'Nuova password'} ${isNew ? '' : '<small class="muted" style="font-weight:500">(lascia vuoto per non cambiarla)</small>'}</span>
+        <div style="display:flex;gap:6px"><input id="u-pass" value="${isNew ? genPassword() : ''}" autocomplete="new-password" spellcheck="false" style="flex:1">
+        <button type="button" class="btn" id="u-gen">Genera</button></div><span class="hint">Almeno 8 caratteri. Comunicala tu alla persona: potrà cambiarla dal suo menu.</span></label>`}
+      <div class="field"><span>Ruolo</span>
+        <div class="seg" style="align-self:flex-start" id="u-role"><button type="button" data-role="staff" class="${v.role === 'staff' ? 'on' : ''}" ${v.fromEnv ? 'disabled' : ''}>Staff</button><button type="button" data-role="admin" class="${v.role === 'admin' ? 'on' : ''}" ${v.fromEnv ? 'disabled' : ''}>Amministratore</button></div>
+        <span class="hint" id="u-rolehint"></span>
+      </div>
+      <div class="field" id="u-catsf"><span>Categorie</span>
+        <div class="chips" id="u-cats">${S.categories.map(c => `<button type="button" class="chip ${cats.has(c.id) ? 'on' : ''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+        <span class="hint">Vedrà gli eventi per tutto lo staff e quelli delle categorie scelte.</span>
+      </div>
+      ${isNew || v.fromEnv ? '' : `<label class="check"><input type="checkbox" id="u-active" ${v.active ? 'checked' : ''}>Accesso attivo</label>`}
+    </div>
+    <div class="sh-foot">
+      ${isNew || v.fromEnv ? '' : `<button class="btn danger" id="u-del">${ic('trash')}Elimina</button>`}
+      <span class="spacer"></span>
+      <button class="btn ghost" data-close>Annulla</button>
+      <button class="btn primary" id="u-save">${isNew ? 'Crea accesso' : 'Salva'}</button>
+    </div>`, { narrow: false });
+  let role = v.role, userTouched = !isNew;
+  const roleUi = () => { $('#u-catsf', sheet).hidden = role === 'admin'; $('#u-rolehint', sheet).textContent = role === 'admin' ? 'Vede tutti gli eventi e gestisce eventi, persone e impostazioni.' : 'Vede solo il calendario, con gli eventi per lui.'; };
+  roleUi();
+  $('#u-name', sheet).oninput = ev => { if (!userTouched) $('#u-user', sheet).value = slug(ev.target.value); };
+  $('#u-user', sheet).oninput = () => userTouched = true;
+  if ($('#u-gen', sheet)) $('#u-gen', sheet).onclick = () => $('#u-pass', sheet).value = genPassword();
+  sheet.addEventListener('click', ev => {
+    const r = ev.target.closest('[data-role]'); if (r && !r.disabled) { role = r.dataset.role; sheet.querySelectorAll('[data-role]').forEach(b => b.classList.toggle('on', b === r)); roleUi(); }
+    const c = ev.target.closest('[data-cat]'); if (c) { cats.has(c.dataset.cat) ? cats.delete(c.dataset.cat) : cats.add(c.dataset.cat); c.classList.toggle('on'); }
+  });
+  const err = m => { const el = $('#uerr', sheet); el.textContent = m; el.hidden = false; sheet.scrollTop = 0; };
+  $('#u-save', sheet).onclick = async () => {
+    const body = { name: $('#u-name', sheet).value, role, categories: [...cats] };
+    if (!v.fromEnv) { body.username = $('#u-user', sheet).value; const p = $('#u-pass', sheet).value; if (p) body.password = p; }
+    if (!isNew && !v.fromEnv) body.active = $('#u-active', sheet).checked;
+    try {
+      if (isNew) await api('/api/users', { method: 'POST', body }); else await api('/api/users/' + u.id, { method: 'PUT', body });
+      await loadState(); renderTop(); render();
+      if (body.password) showCredentials(body.name, body.username.trim().toLowerCase(), body.password, isNew);
+      else { closeDialog(); toast('Salvato'); }
+    } catch (x) { err(x.message); }
+  };
+  if ($('#u-del', sheet)) armed($('#u-del', sheet), async () => {
+    try { await api('/api/users/' + u.id, { method: 'DELETE' }); closeDialog(); await loadState(); render(); toast('Accesso eliminato'); } catch (x) { err(x.message); }
+  });
+}
+function showCredentials(name, user, pass, isNew) {
+  const txt = `Ciao ${name.split(' ')[0]}, ecco ${isNew ? 'il tuo accesso' : 'la tua nuova password'} al calendario eventi:\n\nIndirizzo: ${location.origin}\nNome utente: ${user}\nPassword: ${pass}\n\nDopo il primo accesso puoi cambiare la password dal menu in alto a destra.`;
+  const sheet = openDialog(`${head(isNew ? 'Accesso creato' : 'Password cambiata')}
+    <div class="sh-body"><p style="margin:0" class="muted">Copia il messaggio e mandalo a ${esc(name)}. La password non sarà più visibile dopo aver chiuso questa finestra.</p><div class="cred">${esc(txt)}</div></div>
+    <div class="sh-foot"><span class="spacer"></span><button class="btn" data-close>Chiudi</button><button class="btn primary" id="cp">${ic('copy')}Copia messaggio</button></div>`, { narrow: true });
+  $('#cp', sheet).onclick = async () => { try { await navigator.clipboard.writeText(txt); toast('Messaggio copiato'); } catch { toast('Seleziona il testo e copialo a mano'); } };
+}
+
+/* ============ impostazioni (admin) ============ */
+async function renderSettings() {
+  let usage = { catEvents: {}, catUsers: {}, types: {}, locations: {} };
+  try { usage = await api('/api/usage'); } catch {}
+  const n = (x, one, many) => x ? `${x} ${x === 1 ? one : many}` : '';
+  $('#main').innerHTML = `
+    <div class="head"><div><h2 class="view">Impostazioni</h2><p>Le voci che usi negli eventi e negli accessi. Le modifiche ai nomi valgono subito ovunque.</p></div></div>
+    <div class="settings">
+      <section class="card" data-kind="categories"><h3>Categorie dello staff</h3><p class="sub">Servono a decidere chi vede ogni evento.</p>
+        ${S.categories.map((c, i) => `<div class="li" data-id="${c.id}"><input value="${esc(c.name)}" data-f="name" aria-label="Nome categoria">
+          <span class="n">${[n(usage.catUsers[c.id], 'persona', 'persone'), n(usage.catEvents[c.id], 'evento', 'eventi')].filter(Boolean).join(' · ')}</span>${orderBtns(i, S.categories.length)}<button class="btn icon ghost" data-del title="Elimina" aria-label="Elimina">${ic('trash')}</button></div>`).join('')}
+        <div class="addrow"><input placeholder="Nuova categoria" data-add-name maxlength="80"><button class="btn primary sm" data-add>Aggiungi</button></div></section>
+      <section class="card" data-kind="event_types"><h3>Tipi di evento</h3><p class="sub">Ognuno ha un colore nel calendario.</p>
+        ${S.types.map((t, i) => `<div class="li" data-id="${t.id}"><button class="swatch c-${t.color}" data-color="${t.color}" title="Cambia colore" aria-label="Colore: ${COLOR_NAMES[t.color]}"></button><input value="${esc(t.name)}" data-f="name" aria-label="Nome tipo">
+          <span class="n">${n(usage.types[t.id], 'evento', 'eventi')}</span>${orderBtns(i, S.types.length)}<button class="btn icon ghost" data-del title="Elimina" aria-label="Elimina">${ic('trash')}</button></div>`).join('')}
+        <div class="addrow"><input placeholder="Nuovo tipo, es. Webinar" data-add-name maxlength="80"><button class="btn primary sm" data-add>Aggiungi</button></div></section>
+      <section class="card" data-kind="locations"><h3>Sedi</h3><p class="sub">Dove si svolgono gli eventi.</p>
+        ${S.locations.length ? S.locations.map((l, i) => `<div class="li" data-id="${l.id}"><div class="stack"><input value="${esc(l.name)}" data-f="name" aria-label="Nome sede"><input class="addr" value="${esc(l.address)}" data-f="address" placeholder="Indirizzo" aria-label="Indirizzo"></div>
+          <span class="n">${n(usage.locations[l.id], 'evento', 'eventi')}</span>${orderBtns(i, S.locations.length)}<button class="btn icon ghost" data-del title="Elimina" aria-label="Elimina">${ic('trash')}</button></div>`).join('') : '<p class="muted" style="margin:0;font-size:14px">Nessuna sede ancora.</p>'}
+        <div class="addrow" style="flex-wrap:wrap"><input placeholder="Nome sede" data-add-name maxlength="80"><input placeholder="Indirizzo (facoltativo)" data-add-addr maxlength="200" style="flex-basis:100%"><button class="btn primary sm" data-add>Aggiungi</button></div></section>
+    </div>`;
+  $('#main').dataset.usage = JSON.stringify(usage);
+}
+const orderBtns = (i, len) => `<span class="hide-m" style="display:flex"><button class="btn icon ghost" data-move="-1" ${i === 0 ? 'disabled' : ''} aria-label="Sposta su" style="width:28px">${ic('up')}</button><button class="btn icon ghost" data-move="1" ${i === len - 1 ? 'disabled' : ''} aria-label="Sposta giù" style="width:28px">${ic('down')}</button></span>`;
+const KIND_LIST = { categories: 'categories', event_types: 'types', locations: 'locations' };
+async function refreshSettings(msg) { await loadState(); await reloadEvents(); renderTop(); await renderSettings(); if (msg) toast(msg); }
+$('#main').addEventListener('click', async e => {
+  if (S.view !== 'settings') return;
+  const sec = e.target.closest('[data-kind]'); if (!sec) return;
+  const kind = sec.dataset.kind, list = S[KIND_LIST[kind]], li = e.target.closest('.li'), id = li?.dataset.id;
+  try {
+    if (e.target.closest('[data-add]')) {
+      const name = $('[data-add-name]', sec).value.trim(); if (!name) return $('[data-add-name]', sec).focus();
+      const body = { name, address: $('[data-add-addr]', sec)?.value || '', color: COLORS[list.length % COLORS.length] };
+      await api('/api/' + kind, { method: 'POST', body }); return refreshSettings('Aggiunto');
+    }
+    const mv = e.target.closest('[data-move]');
+    if (mv) {
+      const ids = list.map(x => x.id), i = ids.indexOf(id), j = i + +mv.dataset.move;
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      await api(`/api/${kind}/order`, { method: 'POST', body: { ids } }); return refreshSettings();
+    }
+    const sw = e.target.closest('[data-color]');
+    if (sw) {
+      const old = $('.palette', sec); if (old) { old.remove(); if (old.dataset.for === id) return; }
+      li.insertAdjacentHTML('afterend', `<div class="palette" data-for="${id}">${COLORS.map(c => `<button class="c-${c} ${c === sw.dataset.color ? 'on' : ''}" data-pick="${c}" title="${COLOR_NAMES[c]}" aria-label="${COLOR_NAMES[c]}"></button>`).join('')}</div>`);
+      return;
+    }
+    const pk = e.target.closest('[data-pick]');
+    if (pk) {
+      const tid = pk.closest('.palette').dataset.for, t = S.types.find(x => x.id === tid);
+      await api('/api/event_types/' + tid, { method: 'PUT', body: { name: t.name, color: pk.dataset.pick } }); return refreshSettings();
+    }
+    const del = e.target.closest('[data-del]');
+    if (del) {
+      const u = JSON.parse($('#main').dataset.usage || '{}');
+      const warn = kind === 'categories' ? (u.catEvents?.[id] || u.catUsers?.[id]) : kind === 'event_types' ? u.types?.[id] : u.locations?.[id];
+      if (!del.classList.contains('armed')) {
+        del.classList.add('armed'); del.innerHTML = ic('trash'); del.title = warn ? 'Usata altrove: tocca di nuovo per eliminare' : 'Tocca di nuovo per eliminare';
+        toast(warn ? (kind === 'categories' ? 'In uso: gli eventi solo per questa categoria non saranno più visibili allo staff. Tocca di nuovo per eliminare.' : 'In uso da alcuni eventi, che resteranno senza questa voce. Tocca di nuovo per eliminare.') : 'Tocca di nuovo per eliminare');
+        setTimeout(() => del.isConnected && del.classList.remove('armed'), 4000); return;
+      }
+      await api(`/api/${kind}/${id}`, { method: 'DELETE' }); return refreshSettings('Eliminato');
+    }
+  } catch (x) { toast(x.message); }
+});
+$('#main').addEventListener('change', async e => {
+  if (S.view !== 'settings' || !e.target.dataset.f) return;
+  const sec = e.target.closest('[data-kind]'), li = e.target.closest('.li'), kind = sec.dataset.kind;
+  const item = S[KIND_LIST[kind]].find(x => x.id === li.dataset.id);
+  const body = { ...item, [e.target.dataset.f]: e.target.value };
+  if (!String(body.name).trim()) { e.target.value = item.name; return toast('Il nome non può essere vuoto'); }
+  try { await api(`/api/${kind}/${item.id}`, { method: 'PUT', body }); Object.assign(item, body); renderTop(); toast('Salvato'); } catch (x) { toast(x.message); }
+});
+$('#main').addEventListener('keydown', e => {
+  if (S.view === 'settings' && e.key === 'Enter' && e.target.matches('input')) {
+    if (e.target.matches('[data-add-name],[data-add-addr]')) $('[data-add]', e.target.closest('[data-kind]')).click(); else e.target.blur();
+  }
+});
+
+/* ============ password personale ============ */
+function passwordDialog() {
+  const sheet = openDialog(`${head('Cambia password')}
+    <form class="sh-body" id="pwf">
+      ${S.me.fromEnv ? '<div class="note">La password dell\'amministratore principale si cambia dalle impostazioni di Render (ADMIN_PASSWORD).</div>' : `
+      <div class="err" id="perr" hidden></div>
+      <label class="field"><span>Password attuale</span><input type="password" name="current" autocomplete="current-password" required></label>
+      <label class="field"><span>Nuova password</span><input type="password" name="next" autocomplete="new-password" minlength="8" required><span class="hint">Almeno 8 caratteri.</span></label>`}
+    </form>
+    <div class="sh-foot"><span class="spacer"></span><button class="btn ghost" data-close>${S.me.fromEnv ? 'Chiudi' : 'Annulla'}</button>${S.me.fromEnv ? '' : '<button class="btn primary" id="pws">Cambia password</button>'}</div>`, { narrow: true });
+  if (S.me.fromEnv) return;
+  const go = async ev => {
+    ev?.preventDefault(); const f = $('#pwf', sheet);
+    try { await api('/api/me/password', { method: 'POST', body: { current: f.current.value, next: f.next.value } }); closeDialog(); toast('Password cambiata'); }
+    catch (x) { const el = $('#perr', sheet); el.textContent = x.message; el.hidden = false; }
+  };
+  $('#pws', sheet).onclick = go; $('#pwf', sheet).onsubmit = go;
+}
+
+/* ============ avvio ============ */
+(async () => {
+  try { await loadState(); } catch (e) { $('#main').innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
+  renderTop(); render();
+  // quando l'app torna in primo piano, aggiorna gli eventi
+  document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && !dlg.open) { try { await reloadEvents(); if (S.view === 'cal' || S.view === 'events') render(); } catch {} } });
+})();
+</script>
+</body>
+</html>

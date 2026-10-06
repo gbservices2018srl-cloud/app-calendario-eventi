@@ -1,0 +1,10 @@
+{
+  "name": "Calendario eventi · To Smile",
+  "short_name": "Calendario",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F2EEEF",
+  "theme_color": "#B03A5B",
+  "lang": "it",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
